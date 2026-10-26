@@ -9,6 +9,7 @@ draft: false
 lang: ''
 slug: java基础
 ---
+```plaintext
 @Getter
 public class BizException extends RuntimeException{
     //编号
@@ -38,6 +39,7 @@ public class BizException extends RuntimeException{
         this(resultCode.getCode(), message); //一样
     }
 }
+```
 
 `this.code = code` 里的`this.` 就是为了在"字段名和参数名同名"时，指代"这个对象自己的字段"。
 
@@ -66,8 +68,10 @@ public class BizException extends RuntimeException{
 
 执行到这里时，两个盒子里装的是：
 
-`code    = 502
-message = "余额不足"`
+```plaintext
+code    = 502
+message = "余额不足"
+```
 
 然后
 
@@ -98,10 +102,12 @@ message = "余额不足"`
 同理
 
 ## 全部执行完，你得到了一个对象
-`BizException 对象
+```plaintext
+BizException 对象
 ├── code    = 502
 ├── message = "余额不足"
-└── (父类 RuntimeException 里也存了 "余额不足")`
+└── (父类 RuntimeException 里也存了 "余额不足")
+```
 
 这就是`new BizException(502, "余额不足")` 造出来的完整东西。
 
