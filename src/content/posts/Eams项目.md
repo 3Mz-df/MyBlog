@@ -11,7 +11,7 @@ slug: eams项目
 ---
 pom文件配置环境 让ai按需添加
 
-公共模块:
+**公共模块:**
 ```plaintext
 com.eams.common 下的 api 、enums 、exception 、context 、constant
 
@@ -47,9 +47,10 @@ com.eams.common 下的 api 、enums 、exception 、context 、constant
     - 使用场景：
     - 用类名 + 常量名来取，不用 new；
     - String header = CommonConstants.AUTH_HEADER; 就能拿到"Authorization"
+```
 
 
-Nacos，Spring Cloud Alibaba:
+**Nacos，Spring Cloud Alibaba:**
 
   #Nacos通过Spring Cloud Alibaba去代替原生Spring Cloud的Eureka组件；
 

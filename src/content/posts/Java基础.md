@@ -48,7 +48,7 @@ public class BizException extends RuntimeException{
 造对象用的，当你写`new BizException("余额不足")` 时，Java 就会去执行`BizException(String msg)` 这个构造方法（调构造器），把对象"初始化"好（把 code、message 填进去）。
 
 ## 为什么有 4 个名字都一样的构造方法？
-因为它们的参数不一样 ，Java 允许"名字相同、参数不同"的方法共存，这叫 重载 。
+因为它们的参数不一样 ，Java 允许"名字相同、参数不同"的方法共存，这叫 **重载** 。
 
 `this(600, msg)` ，意思是： 在这个构造方法里，去调用本类另一个构造方法 （带括号的 this = 调构造器）。作用是"偷懒"，把活儿转给更全的那个构造器去干。
 
@@ -77,7 +77,7 @@ message = "余额不足"
 
 `    super(message);`
 
-`super` 是"我爹"（父类 RuntimeException）。这句话 = "爹，我这儿有个消息，你先帮我存一份"。Java 规定异常类必须先跟父类报备消息，这一行 必须写在第一句 。
+`super` 是"我爹"（父类 RuntimeException）。这句话 = "爹，我这儿有个消息，你先帮我存一份"。Java 规定异常类必须先跟父类报备消息，这一行 **必须写在第一句** 。
 
 执行后：父类 RuntimeException 内部也存了一份`"余额不足"` （将来打日志、打印错误堆栈时要用它）。
 
