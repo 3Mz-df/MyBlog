@@ -12,6 +12,7 @@ slug: eams项目
 pom文件配置环境 让ai按需添加
 
 公共模块:
+```plaintext
 com.eams.common 下的 api 、enums 、exception 、context 、constant
 
 api 放对外的数据契约（会出现在接口出参里的类）
@@ -38,6 +39,7 @@ exception 放异常体系（throw / 统一捕获）
 context 放上下文持有（贯穿一次请求的“当前用户”）
 
 constant 放常量（跨模块约定的字符串/数字）
+```
 
 
 Nacos，Spring Cloud Alibaba:
