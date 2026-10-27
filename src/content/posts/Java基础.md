@@ -9,6 +9,7 @@ draft: false
 lang: ''
 slug: java基础
 ---
+## 业务异常
 ```plaintext
 @Getter
 public class BizException extends RuntimeException{
@@ -116,3 +117,117 @@ BizException 对象
 
 - `resultCode.getCode()` → 从包裹里取出`401`
 - `resultCode.getMessage()` → 从包裹里取出`"未登录"`
+---------------------------------------------------------------------------------------------
+## 当前登录用户上下文
+/**
+ * 当前登录用户上下文：用户信息挂在当前线程上
+ */
+public final class UserContext {
+    private UserContext(){}
+
+    //线程存库
+    private static final ThreadLocal<UserInfo> USER_HOLDER = new ThreadLocal<UserInfo>();
+
+    //放进
+    public static void set(UserInfo user){
+        USER_HOLDER.set(user);
+    }
+
+    //取出
+    public static UserInfo get(){
+        return USER_HOLDER.get();
+    }
+
+    //只取 userId 没登陆返回null
+    public static Long getUserId(){
+        UserInfo user = USER_HOLDER.get();
+        return user == null ? null : user.getUserId();
+    }
+
+    //强校验 没登录抛401
+    public static UserInfo requireLogin(){
+        UserInfo user = USER_HOLDER.get();
+        if (user == null){
+            throw new BizException(ResultCode.UNAUTHORIZED);
+        }
+        return user;
+    }
+
+    //清空 请求结束时调用
+    public static void remove(){
+        USER_HOLDER.remove();
+    }
+
+    //内嵌类（装用户信息）
+    @Data
+    public static class UserInfo{
+        private Long userId; //用户ID
+        private String username; //用户名
+        private String realName; //真实姓名
+        private Integer userType; //用户类型（1 2 3 4）
+        private Long institutionId; //所属机构ID（给B端用）
+    }
+}
+---------------------------------------------------------------------------------------------
+## 工具类 
+public final class ***{
+    private ***(){}
+}
+private static final ThreadLocal<UserInfo> USER_HOLDER = new ThreadLocal<UserInfo>();
+//这样线程存储库就建好了 下面再写方法就好；
+
+
+   public static void set(UserInfo user){
+        USER_HOLDER.set(user);
+    }
+外面调用时，传进来UserInfo类型的对象，在这个方法里取个名字叫user，让后.set（user）调用ThreadLocal自带的set方法把user放进存储库；
+
+
+    public static UserInfo get(){
+        return USER_HOLDER.get();
+    }
+return就是交结果 从左往右看好理解一点 .get()取完值后用return返回给调用这个方法的人 并且返回值类型一定是UserInfo类型的；
+
+
+  public static Long getUserId(){
+        UserInfo user = USER_HOLDER.get();
+        return user == null ? null : user.getUserId();
+    }
+￥ ？ 1 ： 2；意思就是在￥条件下成功返回1，否则返回2；
+
+这里的第一行的getUserId是static方法，给外部直接类名.方法名调用的；第三行的getUserId是@Data自动生成的实例方法，需要先创建一个UserInfo对象（user），才能调用；
+
+关于@Data
+Lombok 的「自动生成规则」写的确实是字段`userId` ，Lombok 就是 根据这个字段名自动拼出 getter 方法名 的。
+规则：get + 字段名首字母大写
+Lombok 看到字段：
+`private Long userId;`
+就自动在编译时生成：
+`public Long getUserId(){
+    return this.userId;
+}`
+
+
+    public static UserInfo requireLogin(){
+        UserInfo user = USER_HOLDER.get();
+        if (user == null){
+            throw new BizException(ResultCode.UNAUTHORIZED);
+        }
+        return user;
+    }
+        public static void remove(){
+        USER_HOLDER.remove();
+    }
+
+“手环检验”在真检验（token相关）后再检验，确保用户已登录，防止未登录者修改业务。token是门票，requireLogin是手环（进场上线到线程池），进场看门票和手环，出场撕掉手环（下线，后面的remov方法），避免任务完成的线程信息残留在线程池里。
+---------------------------------------------------------------------------------------------
+## 全局异常处理器
+/**
+ * 全局异常处理器 接所有异常 转成Result结构返回
+ */
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET) //Web专用
+@RestControllerAdvice
+@Slf4j
+public class GlobalExceptionHandler {
+
+}

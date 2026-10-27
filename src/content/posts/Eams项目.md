@@ -39,8 +39,15 @@ com.eams.common 下的 api 、enums 、exception 、context 、constant
     - `extends RuntimeException` 认 RuntimeException 当爹，继承它"能 throw 出去"的本事
     - 使用场景：
     - 造异常对象，当写`new BizException("余额不足")` 时，Java 就会去执行`BizException(String msg)` 这个构造方法（调构造器），把对象"初始化"好（把 code、message 填进去）。
+  GlobalExceptionHandler（全局异常处理器）
+    - 捕获所有异常，统一处理
+    - 统一返回 Result 失败给前端
 
 #context 放上下文持有（贯穿一次请求的“当前用户”）
+  识别当前用户，工具类
+  - 使用场景：
+  - UserContext.方法名(); 直接 类名.方法名 用就行
+  - 检验token后登录状态检验：requireLogin()
 
 #constant 放常量（跨模块约定的字符串/数字）
   token请求头， 网关相关请求头， 用户类型（数字常量）
