@@ -11,7 +11,7 @@ slug: eams项目
 ---
 pom文件配置环境 让ai按需添加
 
-**公共模块:**
+<span style="color:#3b82f6">**公共模块:**</span>
 ```plaintext
 com.eams.common 下的 api 、enums 、exception 、context 、constant
 
@@ -57,20 +57,20 @@ com.eams.common 下的 api 、enums 、exception 、context 、constant
 ```
 
 
-**Nacos，Spring Cloud Alibaba:**
+<span style="color:#3b82f6">**Nacos，Spring Cloud Alibaba:**</span>
 
-  #Nacos通过Spring Cloud Alibaba去代替原生Spring Cloud的Eureka组件；
+  <span style="color:#3b82f6">#Nacos通过Spring Cloud Alibaba去代替原生Spring Cloud的Eureka组件；</span>
 
-  #Nacos发现微服务的地址让网关去读取（通过Spring Cloud Alibaba的Nacos发现功能实现）；
+  <span style="color:#3b82f6">#Nacos发现微服务的地址让网关去读取（通过Spring Cloud Alibaba的Nacos发现功能实现）；</span>
 
-  #网关：gateway，SpringCloud的组件 负责统一入口，负责路由、负载均衡、安全等任务
+  <span style="color:#3b82f6">#网关：gateway，SpringCloud的组件 负责统一入口，负责路由、负载均衡、安全等任务</span>
     - 路由：根据请求路径、参数、头信息等将请求分发到不同的微服务
     - 路由策略：根据微服务的负载、流量、响应时间等动态调整路由规则
     - 负载均衡：将请求均匀分布到多个微服务实例上，避免单点故障
     - 安全：对请求进行认证、授权、加密等安全操作
   ![网关的大致作用](image-1.png)；
 
-  #Spring Cloud Alibaba用sentinel（流量控制、熔断、降级等）处理容错比如雪崩。用skywalking实现链路追踪，处理排错。
+  <span style="color:#3b82f6">#Spring Cloud Alibaba用sentinel（流量控制、熔断、降级等）处理容错比如雪崩。用skywalking实现链路追踪，处理排错。</span>
 
 
 
