@@ -59,7 +59,7 @@ com.eams.common 下的 api 、enums 、exception 、context 、constant
 
 <span style="color:#3b82f6">**Nacos，Spring Cloud Alibaba:**</span>
 
-  <span style="color:#3b82f6">#Nacos通过Spring Cloud Alibaba去代替原生Spring Cloud的Eureka组件；</span>
+  <span style="color:#3b82f6">#Nacos通过Spring Cloud Alibaba去代替原生Spring Cloud的Eureka组件，默认端口8848；</span>
 
   <span style="color:#3b82f6">#Nacos发现微服务的地址让网关去读取（通过Spring Cloud Alibaba的Nacos发现功能实现）；</span>
 
