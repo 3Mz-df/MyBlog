@@ -72,7 +72,9 @@ com.eams.common 下的 api 、enums 、exception 、context 、constant
 
   <span style="color:#3b82f6">#Spring Cloud Alibaba用sentinel（流量控制、熔断、降级等）处理容错比如雪崩。用skywalking实现链路追踪，处理排错。</span>
 
-
+业务服务聚合层
+  聚合模块eams-modules下eams-system
+  pom继承父工程版本； 依赖复用公共模块； 加web依赖； nacos注册中心依赖； 声明基本信息；
 
 
 
