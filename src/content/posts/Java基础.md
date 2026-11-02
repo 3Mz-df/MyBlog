@@ -290,3 +290,12 @@ public class GlobalExceptionHandler {
 ⑥ 前端收到 {"code":400, "message":"...", ...}
 }
 ```
+## 网关
+网关做的事就叫 路由转发 ：`http://localhost:8080/system/xxx` → 自动转发到`eams-system` 服务。
+
+//一个必须记住的坑
+网关用的是 WebFlux + Netty （反应式、异步非阻塞），它跟`spring-boot-starter-web` （Servlet + Tomcat 同步模型）是 两套完全不同的引擎 。
+用汽油车/柴油车打比方：一辆车只能装一种发动机，两个都塞进去就当场报错。所以：
+ 网关里绝对不能加`spring-boot-starter-web` ，否则启动直接冲突报错。
+
+ 

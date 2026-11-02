@@ -76,6 +76,13 @@ com.eams.common 下的 api 、enums 、exception 、context 、constant
   聚合模块eams-modules下eams-system
   pom继承父工程版本； 依赖复用公共模块； 加web依赖； nacos注册中心依赖； 声明基本信息；
 
+  启动类： 网关EamsGatewayApplication； 业务服务EamsSystemApplication
+
+  
+  
+
+
+
 
 
 
