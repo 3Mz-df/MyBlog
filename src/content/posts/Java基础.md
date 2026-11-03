@@ -298,4 +298,58 @@ public class GlobalExceptionHandler {
 用汽油车/柴油车打比方：一辆车只能装一种发动机，两个都塞进去就当场报错。所以：
  网关里绝对不能加`spring-boot-starter-web` ，否则启动直接冲突报错。
 
- 
+## MyBatis-Plus
+//继承BaseMapper用
+
+- 数据源 ：怎么告诉 Spring「数据库在哪、账号密码」。
+  # 数据源
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: "jdbc:mysql://127.0.0.1:3306/eams?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true"
+    username: root
+    password: "****"
+
+- 建表 → 实体类 → Mapper 三层对应关系，以及`@TableName` 、`@TableId` 两个翻译锚点。
+  /**
+  * 系统用户实体
+ */
+@Data
+@TableName("sys_user")
+public class SysUser {
+
+    @TableId(type = IdType.AUTO)
+    private Long id;
+
+    private String username;
+
+    private String nickname;
+
+    private LocalDateTime createTime;
+}
+
+- MyBatis-Plus 的`BaseMapper` 白送增删改查，全程没手写一句 SQL。
+/**
+ * 用户Mapper 继承BaseMapper
+ */
+public interface SysUserMapper extends BaseMapper<SysUser> {
+}
+
+- 构造器注入 ：Spring 怎么把 Mapper「塞」进 Controller。返回 JSON ：Java 对象自动序列化给浏览器
+/**
+ * 检验数据库连通
+ */
+@RestController
+@RequestMapping("/system/user")
+public class UserController {
+    
+    private final SysUserMapper sysUserMapper;
+    
+    public UserController(SysUserMapper sysUserMapper){
+        this.sysUserMapper = sysUserMapper;
+    }
+    
+    @GetMapping("/list")
+    public List<SysUser> list(){
+        return sysUserMapper.selectList(null);
+    }
+}
