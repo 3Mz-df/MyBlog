@@ -353,3 +353,44 @@ public class UserController {
         return sysUserMapper.selectList(null);
     }
 }
+
+## MyBatis-Plus 的 Service 也是"白送"的，继承两个套件`IService` +`ServiceImpl` ，跟 Mapper 一样自动拥有一堆方法（`list` /`getById` /`save` /`updateById` …）。
+
+## 分页查询\
+///**
+ * MyBatis plus配置：分页插件
+ */
+@Configuration
+public class MybatisPlusConfig {
+
+    @Bean
+    public MybatisPlusInterceptor mybatisPlusInterceptor(){
+        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+        //分页拦截器
+        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
+        return interceptor;
+    }
+}
+//SysUserService 增加 pageQuery 分页方法来用
+
+## 补全增删改
+// 新增用户：请求体里塞一段 JSON，Spring 自动翻译成 SysUser 对象
+@PostMapping
+public Result<Void> add(@RequestBody SysUser user){
+    sysUserService.save(user);          // IService 自带的新增方法
+    return Result.success();
+}
+
+// 修改用户：同样读请求体 JSON，但这次 JSON 里必须带 id
+@PutMapping
+public Result<Void> update(@RequestBody SysUser user){
+    sysUserService.updateById(user);    // 根据 id 更新
+    return Result.success();
+}
+
+// 删除用户：id 直接写在 URL 里，比如 /system/user/5
+@DeleteMapping("/{id}")
+public Result<Void> delete(@PathVariable Long id){
+    sysUserService.removeById(id);      // 根据 id 删除
+    return Result.success();
+}
