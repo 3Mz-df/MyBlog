@@ -394,3 +394,47 @@ public Result<Void> delete(@PathVariable Long id){
     sysUserService.removeById(id);      // 根据 id 删除
     return Result.success();
 }
+
+
+## 注解
+  - `@RequestBody` ：负责"把 JSON 翻译成`SysUser` 对象"；
+  - `@Valid` ：负责"翻译完之后，按`SysUser` 里写好的注解（`@NotBlank` 、`@Size` 等校验注解），把这个对象检查一遍"。
+
+
+## Knife4j/OpenAPI接口测试文档配置
+pom:
+        <!-- Knife4j -->
+        <dependency>
+            <groupId>com.github.xiaoymin</groupId>
+            <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+        </dependency>
+
+config:
+/**
+ * Knife4j/OpenAPI接口测试文档配置
+ */
+@Configuration
+public class Knife4jConfig {
+
+    @Bean
+    public OpenAPI openAPI(){
+        return new OpenAPI()
+                .info(new Info()
+                        .title("EAMS 教培管理系统 - 系统服务接口文档")
+                        .description("sys_user 用户管理等系统模块接口")
+                        .version("1.0.0"));
+    }
+}
+
+yml：
+# Knife4j 接口文档
+springdoc:
+  api-docs:
+    enabled: true #接口数据源
+  swagger-ui:
+    enabled: true #接口文档界面
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn

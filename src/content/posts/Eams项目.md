@@ -9,6 +9,8 @@ draft: false
 lang: ''
 slug: eams项目
 ---
+https://github.com/3Mz-df/-Education-Agency-Management-System
+
 pom文件配置环境 让ai按需添加
 
 <span style="color:#3b82f6">**公共模块:**</span>
