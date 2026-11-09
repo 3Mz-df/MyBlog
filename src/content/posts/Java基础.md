@@ -9,6 +9,9 @@ draft: false
 lang: ''
 slug: java基础
 ---
+## commit规范
+`feat` 新功能 `fix` 修 bug `docs` 文档 `chore` 杂活（依赖、配置、构建） `refactor` 重构（不改功能） `style` 格式（空格、缩进，不动逻辑）
+
 ## 业务异常
 ```plaintext
 @Getter
