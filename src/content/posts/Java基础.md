@@ -430,7 +430,6 @@ public class Knife4jConfig {
 }
 
 yml：
-# Knife4j 接口文档
 springdoc:
   api-docs:
     enabled: true #接口数据源
@@ -441,3 +440,121 @@ knife4j:
   enable: true
   setting:
     language: zh_cn
+
+----------------------------------------------------------
+## 关于Spring：
+Spring 是地基，Spring Boot 是盖在地基上的“精装脚手架” 。两者并非并列的替代关系，Spring Boot 并不是另一个新框架；它只是对 Spring 的自动化封装。
+
+## Spring 到底是什么
+“Spring”这个词其实指一整个家族，最底层的是 Spring Framework 。它提供的是这些“能力零件”：
+
+模块 作用 IoC / DI 容器 帮你 new 对象、管对象、注入依赖 AOP 日志、事务这类横切逻辑抽出去 事务管理 `@Transactional` 背后的实现 Spring MVC 处理 HTTP 请求、路由到 Controller 数据访问 JdbcTemplate、整合 MyBatis / JPA
+
+问题是：这些零件 全靠你手动拼装 。用传统 Spring 写一个 Web 项目，要写`web.xml` 、`applicationContext.xml` ，手动配 DispatcherServlet、数据源、事务管理器……配置量可能比业务代码还多。
+
+
+## Spring Boot 干了什么
+Spring Boot 不做新功能 ，它只做三件事，把上面那套拼装活儿自动化：
+
+1. 起步依赖（starter） ：一个依赖顶一堆。引入`spring-boot-starter-web` ，Spring MVC、Jackson、内嵌 Tomcat 就都齐了，版本还帮你对齐好。
+2. 自动配置 ：类路径里有什么 jar，它就按约定帮你配好对应的 Bean。有 Tomcat 就配 Web 环境，有 MySQL 驱动就配数据源——这就是“约定优于配置”。
+3. 内嵌服务器 + 启动类 ：打成一个 jar，`java -jar` 直接跑，不用再装外部 Tomcat、部署 war 包。
+
+
+## 注解
+- Spring 容器 = 一个大工具箱 。
+- `@Bean` = 往工具箱里"放一件工具"
+- `@Configuration` = 告诉 Spring："这个类里放工具了，帮我登记一下。"
+好处：以后谁要用这件工具， 不用自己`new` ，写个`@Autowired` ，Spring 就从工具箱里递给你。全项目共用同一个实例，而且以后想换，只改这一个地方。
+----------------------------------------------------------
+## JWT
+//JWT工具类
+public class JwtUtil {
+    //token
+    private static final String SECRET = "eams-jwt-secret-key-please-change-me-2026";
+
+    //token有效期7天
+    private static final long EXPIRE = 604800000;
+
+    //转换
+    private static final SecretKey KEY = Keys.hmacShaKeyFor(SECRET.getBytes());
+
+    //生成token
+    public static String generateToken(Long userId, String username) {
+        return Jwts.builder()
+                .subject(username) // 设置主题
+                .claim("userId", userId) // 添加自定义声明
+                .issuedAt(new Date()) // 设置签发时间
+                .expiration(new Date(System.currentTimeMillis() + EXPIRE)) //过期时间
+                .signWith(KEY)  //防伪
+                .compact(); //打包
+    }
+
+    //解析token
+    public static Claims parseToken(String token) {
+        return Jwts.parser()
+                .verifyWith(KEY)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+}
+
+接口
+    /**
+     * 登录：校验用户名密码，成功返回 token
+     */
+    String login(LoginDTO loginDTO);
+实现
+    private final PasswordEncoder passwordEncoder;
+
+    //构造器注入 让Spring传入 BCryptPasswordEncoder
+    public SysUserServiceImpl(PasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
+    }
+        @Override
+    public String login(LoginDTO loginDTO) {
+        //根据用户名查用户
+        SysUser user = this.getOne(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getUsername, loginDTO.getUsername()), false);
+        //用户不存在
+        if (user == null || !passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
+            throw new BizException(ResultCode.UNAUTHORIZED, "用户名或密码错误");
+         }
+
+        //登陆成功
+        return JwtUtil.generateToken(user.getId(), user.getUsername());
+        }
+- `LambdaQueryWrapper` ：MyBatis-Plus 的"链式查询条件"，`.eq(字段, 值)` = "字段等于值"，不用手写 SQL。`getOne(..., false)` 里的`false` 意思是"如果查到多条不抛异常，取第一条"。
+- `passwordEncoder.matches(明文, 密文)` ：BCrypt 是单向的，只能"比对"不能"解密"，返回 true/false。
+- 为什么统一提示"用户名或密码错误" ：不告诉攻击者"到底是账号不存在还是密码错"，防止恶意试探出哪些用户名存在。
+- 失败时抛`BizException(ResultCode.UNAUTHORIZED, ...)` ，会被 GlobalExceptionHandler ` 返回。这就是项目里"业务异常统一抛出"的用法。
+
+## 密码加密方式
+BCrypt 每次加密同一份明文，结果都不一样，因为他会再密文里加一个随机的盐（随机字符）
+比如同样123的密码，每次加密出的结果都不同就是因为盐不一样。这样数据库里存的每个人的密码密文都是独立的。
+这里用 matches(明文, 密文) 去检验那个数据库里存好的盐；
+`matches` 内部干的事是这样：
+1. 从数据库的密文里取出盐。
+2. 用这个 同一把盐 + 你输入的明文，重新算一遍哈希。
+3. 比"算出来的结果"和"数据库里存的"是不是一致。
+if (user == null || !passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
+            throw new BizException(ResultCode.UNAUTHORIZED, "用户名或密码错误");
+         }
+tips：`!` 是取反，意思是" 只要比对不过（false），就走进 if 里抛异常 "。
+
+## 盐
+`salt` （盐值）。它是密码学里一个通用概念，不光 BCrypt 用，SHA-256 加盐、PBKDF2、Argon2 这些加密方案全都用。
+盐就是一段随机字符串 。加密前，把"密码 + 盐"混在一起再哈希。
+不加盐：  hash("123456")                 → 所有人结果都一样
+加盐：    hash("123456" + "随机盐A")      → 张三的结果 ≠ 李四的结果
+
+
+## DTO
+`password` 加的`@JsonIgnore` ，其实会 同时屏蔽两个方向 ：
+- 输出 （返回给前端）：密码被隐藏 ✅ 这是我们要的。
+- 输入 （前端传进来）：密码也读不进来 ❌ 这是副作用。
+所以`SysUser` 不能 用来当登录的请求体（否则 password 根本收不到）。而且登录只需要`username + password` 两个字段，没必要塞整个实体。
+
+结论：建一个专门的`LoginDTO` 来收登录参数。 DTO = 专门给前端"传进/传出"用的对象 ，跟数据库实体分开，这就是之前说的"彻底隔离"。
+----------------------------------------------------------
