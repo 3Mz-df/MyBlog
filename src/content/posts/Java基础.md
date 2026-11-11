@@ -558,3 +558,157 @@ tips：`!` 是取反，意思是" 只要比对不过（false），就走进 if �
 
 结论：建一个专门的`LoginDTO` 来收登录参数。 DTO = 专门给前端"传进/传出"用的对象 ，跟数据库实体分开，这就是之前说的"彻底隔离"。
 ----------------------------------------------------------
+## JWT 拦截器 + 注册放行路径
+/**
+ * JWT 登录拦截器：校验请求头里的 token，不合法就拦截返回 401
+ */
+@Component
+public class JwtInterceptor implements HandlerInterceptor {
+
+    private final ObjectMapper objectMapper;
+
+    // 注入 Spring 的 ObjectMapper（把 Result 转成 JSON 写回给前端）
+    public JwtInterceptor(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        //从请求头里拿 token
+        String token = request.getHeader("Authorization");
+
+        //没带 token，或格式不对 拦截
+        if (token == null || !token.startsWith("Bearer ")) {
+            return reject(response);
+        }
+
+        //去掉 "Bearer " 前缀，拿到真正的 token
+        token = token.substring(7);
+
+        try {
+            //解析 token，过期/伪造/被篡改都会抛异常
+            JwtUtil.parseToken(token);
+        } catch (Exception e) {
+            // 解析失败  拦截
+            return reject(response);
+        }
+
+        //token 合法 → 放行
+        return true;
+    }
+
+    // 拦截并返回 401（把错误信息写成 JSON 写回给前端）
+    private boolean reject(HttpServletResponse response) throws Exception {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // HTTP 状态码 401
+        response.setContentType("application/json;charset=UTF-8");
+        Result<Void> result = Result.failed(ResultCode.UNAUTHORIZED);
+        response.getWriter().write(objectMapper.writeValueAsString(result));
+        return false; // 返回 false = 拦截
+    }
+}
+
+/**
+ * Web 配置：注册 JWT 拦截器，并配置哪些路径需要登录、哪些放行
+ */
+@Configuration
+public class WebMvcConfig implements WebMvcConfigurer {
+
+    private final JwtInterceptor jwtInterceptor;
+
+    public WebMvcConfig(JwtInterceptor jwtInterceptor) {
+        this.jwtInterceptor = jwtInterceptor;
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(jwtInterceptor)
+                .addPathPatterns("/**")           // 拦所有请求
+                .excludePathPatterns(             // 但这些路径放行（免登录）
+                        "/system/user/login",     // 登录接口本身（否则没法登录）
+                        "/doc.html",              // Knife4j 文档页面
+                        "/webjars/**",            // Knife4j 静态资源
+                        "/v3/api-docs/**",        // 接口文档 JSON
+                        "/swagger-ui/**",         // swagger-ui 页面
+                        "/favicon.ico",
+                        "/error"
+                );
+    }
+}
+
+1.`Authorization: Bearer xxx` 是啥？
+
+这是 HTTP 行业约定：token 放在请求头`Authorization` 里，格式`Bearer 空格 token` 。`Bearer` 是"持有者"的意思，可以理解为"我拿这个凭证证明我是谁"。前端调接口时要在请求头带上它。
+
+2. 为什么拦截器里要"自己写 JSON"，而不是抛异常？
+
+还记得我们之前的`GlobalExceptionHandler` 吗？它其实 管不到拦截器 。因为：
+
+- 拦截器的`preHandle` 在 Controller 之前 执行。
+- `@RestControllerAdvice` 只能捕获 Controller 里 抛出的异常。
+- 拦截器里抛异常，会直接变成 500 错误页，不会变成我们想要的 JSON。
+所以拦截器里要 手动 把 401 和错误 JSON 写回`response` ，然后`return false` 拦下。
+
+3.`addPathPatterns("/**")` +`excludePathPatterns(...)` 就是"看门规则"
+
+- `addPathPatterns` ：大爷站哪些门（所有门`/**` ）。
+- `excludePathPatterns` ：大爷手里的"免检名单"（登录接口、文档页面不用查证件）。
+注意： 登录接口`login` 必须放行 ，否则你连登录都登录不了，就死锁了。
+
+
+## 拦截器类里的线程 用上UserContext
+  JwtInterceptor类下
+
+try {
+            Claims claims = JwtUtil.parseToken(token);
+
+            //从 token 里取出 userId 和 username
+            //用 toString 统一转
+            Object userIdObj = claims.get("userId");
+            Long userId = userIdObj == null ? null : Long.valueOf(userIdObj.toString());
+            String username = claims.getSubject();
+
+            // 装进 UserInfo，挂到当前线程的抽屉里
+            UserContext.UserInfo userInfo = new UserContext.UserInfo();
+            userInfo.setUserId(userId);
+            userInfo.setUsername(username);
+            UserContext.set(userInfo);
+        } catch (Exception e) {
+            //解析失败  拦截
+            return reject(response);
+        }
+
+        //token 合法 → 放行
+        return true;
+    }
+
+    // 请求结束时调用：清空线程池
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
+        UserContext.remove();
+    }
+
+1. 为什么要`afterCompletion` 里`UserContext.remove()` ？
+
+Tomcat 用 线程池 复用线程。一个请求处理完，线程会被拿去处理下一个请求。如果不清空抽屉：
+
+- 下一个请求可能拿到 上一个请求留下的 userId → 严重的话会"串号"（A 的操作被当成 B 的）。
+- 抽屉里的对象引用一直不被释放 → 内存泄漏。
+所以"用完必须清"，这是 ThreadLocal 的铁律。
+
+2.`userIdObj.toString()` 这个写法是为什么？
+
+我们存 token 时`userId` 是`Long` 。但 token 本质是 JSON，JSON 里`1` 这种小数字，解析回来时 可能是`Integer` 也可能是`Long` 。如果直接`(Long) claims.get("userId")` 强转，遇到`Integer` 就会 ClassCastException。用`Long.valueOf(toString())` 两种都能安全转。
+
+3.`get()` vs`requireLogin()`
+
+`UserContext` 里有两个取法（你已经写好了）：
+
+- `get()` → 可能返回 null（宽松）。
+- `requireLogin()` → 没登录就抛 401（严格）。
+
+## JWT至此；
+- JWT：签 token、验 token、Header 里怎么传。
+- BCrypt：盐、单向哈希、`encode` /`matches` 。
+- Spring DI：`@Component` 、`@Bean` 、构造器注入、按类型注入。
+- 拦截器：`HandlerInterceptor` 、放行规则、为什么拦截器里要手动写 JSON。
+- ThreadLocal +`UserContext` ：上下文传递、为什么用完必须`remove()` 。
