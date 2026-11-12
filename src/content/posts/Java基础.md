@@ -712,3 +712,140 @@ Tomcat 用 线程池 复用线程。一个请求处理完，线程会被拿去�
 - Spring DI：`@Component` 、`@Bean` 、构造器注入、按类型注入。
 - 拦截器：`HandlerInterceptor` 、放行规则、为什么拦截器里要手动写 JSON。
 - ThreadLocal +`UserContext` ：上下文传递、为什么用完必须`remove()` 。
+## 现在系统具备的能力
+- 用户登录 （JWT 签发 token）
+- 用户增删改查 （分页、按 id 查、新增、更新、删除）
+- 密码安全 （新增/更新都 BCrypt 加密，接口不泄露密码）
+- 接口鉴权 （不带 token 返回 401）
+- /current （返回当前登录用户完整信息）
+
+
+
+
+## 分页查询增强 
+- 给`/list` 加上「关键词搜索 + 按用户类型/状态筛选」。
+
+现在`/list` 只能干巴巴地翻页。增强后，前端可以传这 3 个 可选 参数：
+`keyword` 关键词，模糊搜「用户名」或「手机号」 搜`张` 能匹配到"张三"
+`userType` 按用户类型筛选 只查`1` 管理员 
+`status` 按状态筛选 只查`1` 正常
+
+## LambdaQueryWrapper
+`LambdaQueryWrapper` 就是一张「 筛选条件清单 」。你先往清单上一条条写条件，写完后交给查询方法，它按清单去数据库筛数据。
+常用三个"写条件"的动作：
+- `.like(字段, 值)` —— 模糊匹配 ，字段里"包含"这个值就命中（搜关键词用它）
+- `.eq(字段, 值)` —— 等于 ，字段的值完全等于这个值（精确筛选用它）
+- `.and(...).or()` —— 把括号里的多个条件用「 或 」连起来（"用户名 或 手机号 匹配关键词"）
+动态条件 是关键：用`if` 判断， 传了才往清单上加，没传就不加 。这样参数可选。
+
+## 具体操作
+接口加上参数
+String keyword, Integer userTpye, Integer status
+实现
+//构建条件构造器
+        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
+        //关键词模糊匹配（手机号，用户名）
+        if (keyword != null && !keyword.isEmpty()) {
+            wrapper.and(w -> w.like(SysUser::getUsername, keyword)
+                    .or().like(SysUser::getPhone, keyword));
+        }
+- tips：getter 的命名规则（JavaBean 规范）
+        Lombok 的`@Data` 自动帮你生成 getter 时，有一套固定规则：
+        `get` + 字段名首字母大写
+        所以字段`status` 自动生成的 getter 方法叫`getStatus` （get + Status）。
+- tips：`String` 文本/字符串 关键词`keyword` 、用户名、手机号、邮箱、地址 
+        `Long` 整数 （64 位（19位数），能存 null） 页码`pageNum` 、条数`pageSize` 、主键 id 
+        `Integer` 整数 （32 位（10位数），能存 null） 用户类型`userType` 、状态`status`
+        注意：这里手机号应该是一种标识（后续不用他），所以这里用`String` 而不是`Long`，而且Long会把0开头的手机号的0去掉。
+
+## lambdaQueryWrapper
+wrapper.and(w -> w.like(SysUser::getUsername, keyword)
+                  .or().like(SysUser::getPhone, keyword));
+
+- `wrapper.and(...)` —— 往清单上加「 一组 条件」，这组条件内部用「或」连接，外面包一层括号。
+- `w -> ...` —— 这是一个 lambda 表达式 ，`w` 代表「这组括号里的一个小清单」。可以读成：" 在这个小清单 w 上，做下面这些操作 "。
+- `w.like(SysUser::getUsername, keyword)` —— 在 w 上加一条：username 字段 包含 keyword。
+- `.or()` —— 或者。
+- `.like(SysUser::getPhone, keyword)` —— 再加一条：phone 字段 包含 keyword。
+`and` 包一个括号，括号里用`or` 连两个`like` ，实现"用户名或手机号模糊搜索"。
+
+
+
+
+if (userType != null) {
+     wrapper.eq(SysUser::getUserType, userType); }
+如果传了`userType` ，就往清单加一条：`userType 等于 这个值` 。
+`eq` = equal = 等于（精确匹配）。
+
+if (status != null) {
+     wrapper.eq(SysUser::getStatus, status); }
+同理
+一般表设计为：
+`userType` 用户类型 `1` = 管理员/老师，`0` = 普通用户 
+`status` 账号状态 `1` = 正常启用，`0` = 禁用/停用
+
+- tips：.eq（字段, 值）方法里面有两个参数
+        ## 参数 1：SysUser::getUserType —— 指定"对哪个字段"
+        这是方法引用（`::` 是方法引用符号）。它的作用是告诉 MyBatis-Plus： "我要操作的是`userType` 这个字段。"
+         MyBatis-Plus 拿到`getUserType` 这个方法名，会 反推出字段名`userType` ，再转成数据库列名`user_type` 。
+
+        ## 参数 2：userType —— 指定"等于什么值"
+        这是你`pageQuery` 方法的 入参 （前端传来的那个整数，比如`1` ）。 
+        最后=1的这个条件会加到清单里，在最后的最后同分页对象一起传给查询方法
+## 最后执行 返回
+        //执行分页查询 条件清单一并上交
+        this.page(page, wrapper);
+        //返回分页结果
+        return PageResult.of(page.getCurrent(), page.getSize(), page.getTotal(), page.getRecords());
+- tips：`this.page(page, wrapper)` 
+         是在调用 MyBatis-Plus 白送 的一个方法（和之前用的`getById` 、`save` 、`updateById` 一样，都是继承`ServiceImpl` 得到的）。
+       `this` —— 当前这个 service 对象（`SysUserServiceImpl` 实例）
+       `page(page, wrapper)` —— 调 MyBatis-Plus 的`page` 方法
+            ① 读取 page 里的页码、条数
+            ② 读取 wrapper 里的条件
+            ③ 拼出 SQL：SELECT ... WHERE ... LIMIT ...
+            ④ 去数据库执行
+            ⑤ 把查到的结果填回 page 对象
+ 
+       `.of`
+        本质就是： 帮你`new` 一个`PageResult` 对象、填好值、返回给你 。它把「创建 + 赋值」打包成了一个方法。
+        他这里做了：
+        1. 封装 ：一行搞定「new + 4 个 set」，不用你自己`new` 完再一个个 set。
+        2. 额外逻辑 ：它顺便算好了「总页数」`(total + pageSize - 1) / pageSize` ，还把`list` 为 null 时兜底成空列表。
+        这是个静态方法
+        静态方法：直接类名.方法名() 调用
+        实例方法：实例对象.方法名() 调用（要先new对象）
+
+        这里用PageResult是因为分页要返回多种信息一个对象不好装多在Result里嵌套个PageResult来专门装分页返回信息
+
+
+## Controller的list接前端
+@GetMapping("/list")
+    public Result<PageResult<SysUser>> list(
+            @RequestParam(defaultValue = "1") Long pageNum,
+            @RequestParam(defaultValue = "10") Long pageSize,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer userType,
+            @RequestParam(required = false) Integer status){
+        return Result.success(sysUserService.pageQuery(pageNum, pageSize, keyword, userType, status));
+            }
+
+- tips：`@RequestParam` 是「接收 URL 上的查询参数」的注解，比如前端请求：
+
+        `GET /system/user/list?keyword=张&userType=1&status=1&pageNum=1&pageSize=10`
+
+        `?` 后面的每一对`key=value` 就是一个参数，`@RequestParam` 负责把它们接进来。
+
+        它有两种用法：
+
+        1. `defaultValue = "1"` —— 给个默认值。`pageNum` 、`pageSize` 如果前端没传，就用默认值 1 和 10。
+        2. `required = false` —— 表示「可选」。`keyword` 、`userType` 、`status` 前端 不传也不会报错 ，值就是`null` 。
+        对比一下：如果不写`required = false` ，Spring 会默认「这个参数必传」，前端漏传就会报错。
+
+
+
+
+
+
+
+
