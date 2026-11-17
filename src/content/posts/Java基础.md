@@ -842,9 +842,162 @@ if (status != null) {
         2. `required = false` —— 表示「可选」。`keyword` 、`userType` 、`status` 前端 不传也不会报错 ，值就是`null` 。
         对比一下：如果不写`required = false` ，Spring 会默认「这个参数必传」，前端漏传就会报错。
 
+-----------------------------------------------------------------------
 
-第一个业务模块
+## 新模块 eams-course 课程模块
+
+## pom文件配置 版本 依赖
+<description>EAMS 课程服务</description> //服务简介
+
+## 启动类
+@SpringBootApplication(scanBasePackages = "com.eams")
+@MapperScan("com.eams.course.mapper")
+public class EamsCourseApplication {
+
+    public static void main(String[] args){
+        //启动课程服务
+        SpringApplication.run(EamsCourseApplication.class, args);
+    }
+}
+
+## yml文件配置
+# 课程服务端口
+server:
+  port: 8085
+
+spring:
+   服务名
+  application:
+    name: eams-course
+  cloud:
+    nacos:
+      # 注册中心：Nacos地址（本机+8848端口）
+      discovery:
+        server-addr: 127.0.0.1:8848
+        ip: 127.0.0.1
+   数据源
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: "jdbc:mysql://127.0.0.1:3306/eams?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true"
+    username: root
+    password: "070109"
+
+  Knife4j 接口文档
+springdoc:
+  api-docs:
+    enabled: true #接口数据源
+  swagger-ui:
+    enabled: true #接口文档界面
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+## 实体类
+/**
+ * 课程实体
+ */
+@Data
+@TableName("edu_course")
+public class EduCourse {
+
+    //课程ID
+    @TableId(type = IdType.AUTO)
+    private Long id;
+
+    //课程名称
+    private String courseName;
+
+    //课程简介
+    private String description;
+
+    //课程状态 0草稿 1上架 2下架
+    private Integer status;
+
+    //创建时间
+    private LocalDateTime createTime;
+
+    //更新时间
+    private LocalDateTime updateTime;
+
+}
+- 装私有属性
+tips：@Data 注解会自动生成 get 和 set 方法。注意属性名要跟数据库里的字段对的上，EduCourse类里的属性要参与数据库字段映射。courseName（实体类里） -> course_name（数据库里）。
 
 
+## mapper数据库操作接口 （mybatis-plus提供）
+public interface EduCourseMapper extends BaseMapper<EduCourse> {
+}
+tips：BaseMapper<EduCourse>是 MyBatis-Plus 提供的通用数据库操作接口，前面启动类的@MapperScan("com.eams.course.mapper")就是扫描的这里，把mapper接口注册进应用。
 
+## servcie业务接口 （mybatis-plus提供）
+/**
+ * 课程业务接口
+ */
+public interface EduCourseService extends IService<EduCourse> {
+}
+tips：IService<EduCourse> 是 MyBatis-Plus 提供的通用业务接口，前面启动类的@ServiceScan("com.eams.course.service")就是扫描的这里，把service接口注册进应用。
+
+## 实现类
+/**
+ * 课程业务实现
+ */
+@Service
+public class EduCourseServiceImpl
+        extends ServiceImpl<EduCourseMapper, EduCourse>
+        implements EduCourseService{
+}
+- implements EduCourseService：表明这个类实现课程业务接口。
+- extends ServiceImpl<EduCourseMapper, EduCourse>：继承 MyBatis-Plus 已经写好的基础业务实现，使用 EduCourseMapper 操作课程数据。
+- @Service：让 Spring 创建并管理这个实现类，后面 Controller 就能注入它。
+tips：ServiceImpl 是 MyBatis-Plus 写好的通用实现类，用户模块、课程模块都能用。它需要通过泛型知道你这个模块具体用哪些类型。这里EduCourse用的就是实体类。在java里叫引用类型。
+
+## Controller
+/**
+ * 课程接口
+ */
+@RestController
+@RequestMapping("/course")
+public class CourseController {
+
+    private final EduCourseService eduCourseService;
+
+    //构造方法注入课程业务对象
+    public CourseController(EduCourseService eduCourseService){
+        this.eduCourseService = eduCourseService;
+    }
+
+    //查看课程列表
+    @GetMapping("list")
+    public Result<List<EduCourse>> list(){
+        List<EduCourse> courses = eduCourseService.list();
+        return Result.success(courses);
+    }
+}
+- 请求地址：`/course` 和 /list 拼起来，就是 GET /course/list。
+- eduCourseService.list()：使用 MyBatis-Plus 提供的查询方法，查询全部课程。
+- Result<List<EduCourse>>：外面是统一响应格式，里面装着一个课程集合，集合中的每个元素都
+  是EduCourse 对象。
+
+  tips:可以把 Controller 理解成一个办事大厅：
+- /course：找到“课程业务大厅”。
+- /list：找到“查询课程列表窗口”。
+- GET：说明这是以 GET 方式发来的请求。
+http://localhost:8085/course/list
+└──── 服务地址 ────┘└── 接口路径 ──┘
+当浏览器访问这个地址时，Spring 找到匹配的注解，就会调用你的 list() 方法。
+
+- 关于注入对象
+这一步是让 Controller 拿到课程 Service 对象，后面才能调用它的业务方法。 这种写法叫 “构造方法注入”
+创建 Controller 对象时，会执行这个方法。
+括号里的参数表示：创建这个 Controller 时，需要传进来一个课程 Service 对象。
+
+this.eduCourseService = eduCourseService;
+右边是传进来的也就是构造方法收到的参数，左边的是当前Controller对象里的成员变量。这行代码的作用也就是把传入的课程Service对象赋值给当前Controller对象的成员变量存着，也就是传到eduCourseService成员变量里（前面private final声明的那个）。
+tips：
+保存的是 Service 对象的“引用”，没有复制出一个新对象。 可以理解为把这个对象的“联系方式”保存下来。
+所以构造方法执行完后，查询方法仍然能通过成员变量找到这个 Service 对象，调用它的方法：
+// 使用之前保存的 Service 对象，查询课程列表
+eduCourseService.list();
 
