@@ -997,7 +997,96 @@ this.eduCourseService = eduCourseService;
 右边是传进来的也就是构造方法收到的参数，左边的是当前Controller对象里的成员变量。这行代码的作用也就是把传入的课程Service对象赋值给当前Controller对象的成员变量存着，也就是传到eduCourseService成员变量里（前面private final声明的那个）。
 tips：
 保存的是 Service 对象的“引用”，没有复制出一个新对象。 可以理解为把这个对象的“联系方式”保存下来。
-所以构造方法执行完后，查询方法仍然能通过成员变量找到这个 Service 对象，调用它的方法：
-// 使用之前保存的 Service 对象，查询课程列表
+所以构造方法执行完后，查询方法仍然能通过成员变量找到这个 Service 对象，调用它的方法:
+使用之前保存的 Service 对象，查询课程列表
 eduCourseService.list();
 
+## 新增课程-接收新增数据的对象 DTO
+/**
+ * 新增课程的请求参数
+ */
+@Data
+public class CourseAddDTO {
+    //课程名称
+    @NotBlank(message = "课程名称不能为空")
+    @Size(max = 200, message = "课程名称不能超过100个字符")
+    private String courseName;
+
+    //课程简介
+    @Size(max = 1000, message = "课程简介不能超过1000个字符")
+    private String desription;
+}
+为什么已经有 EduCourse，还要写一个 DTO？
+可以把 DTO 理解成给用户填写的申请表：
+CourseAddDTO	接收新增课程时允许填写的内容
+EduCourse	表示数据库中的完整课程记录
+
+新增时，用户填写名称和简介就够了。ID 由数据库生成，状态由业务代码设为草稿，时间由数据库维护，所以这份申请表里只放两个属性。
+
+两个校验注解分别是：
+- @NotBlank：不能不传、不能是空字符串，也不能只有空格。
+
+## 新增课程-接口、实现
+/**
+ * 课程业务接口
+ */
+public interface EduCourseService extends IService<EduCourse> {
+
+    //新增课程，返回数据库生成的课程id
+    Long addCourse(CourseAddDTO courseAddDTO);
+}
+
+/**
+ * 课程业务实现
+ */
+@Service
+public class EduCourseServiceImpl
+        extends ServiceImpl<EduCourseMapper, EduCourse>
+        implements EduCourseService{
+    @Override
+    public Long addCourse(CourseAddDTO courseAddDTO) {
+        //创建课程对象 保存到数据库
+        EduCourse course = new EduCourse();
+
+        //请求参数对象的数据复制到实体对象
+        course.setCourseName(courseAddDTO.getCourseName());
+        course.setDescription(courseAddDTO.getDescription());
+
+        //新课程默认保存为草稿
+        course.setStatus(0);
+
+        //新增方法
+        save(course);
+
+        //数据库自动生成的id
+        return course.getId();
+    }
+}
+
+tips：对于引用类型EduCourse
+主要起两个作用：
+1. 限制变量能引用什么对象。 course 可以引用课程对象，不能把 "Java入门" 这样的字符串赋给它。
+2. 让编译器知道可以调用哪些方法。 因为类型是 EduCourse，编译器就会去这个类中检查对应的方法：
+// EduCourse 有这些方法，所以可以调用
+course.setCourseName("Java 基础入门");
+course.setStatus(0);
+
+## 新增课程-Controller（把新增业务结成HTTP接口）
+   //新增课程
+    @PostMapping
+    public Result<Long> add(@Valid @RequestBody CourseAddDTO courseAddDTO){
+        //拿到新课程ID
+        Long courseId = eduCourseService.addCourse(courseAddDTO);
+        return Result.success(courseId);
+    }
+
+@RequestBody：把请求体中的 JSON 数据转换为 CourseAddDTO 对象。
+@Valid：检查 DTO 中的校验规则，例如课程名称不能为空。
+
+## 新增课程整体流程
+前端发送请求：向 POST /course 提交课程名称、简介等 JSON 数据。
+Spring 转换并校验：通过 @RequestBody 转成 CourseAddDTO 对象，再通过 @Valid 检查名称是否为空、长度是否超限。
+Controller 调用业务方法：把 DTO 传给 eduCourseService.addCourse(courseAddDTO)。
+Service 组装课程实体：创建 EduCourse 对象，填入名称、简介，并设置草稿状态。
+执行保存：`save(course)` 通过 Mapper 向数据库插入课程记录，数据库在这时生成自增 ID。
+回填并返回 ID：MyBatis-Plus 将生成的 ID 填入 course.id，Service 取出它，Controller 再包装成响应返回前端。
