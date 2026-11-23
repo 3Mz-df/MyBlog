@@ -1090,3 +1090,23 @@ Controller 调用业务方法：把 DTO 传给 eduCourseService.addCourse(course
 Service 组装课程实体：创建 EduCourse 对象，填入名称、简介，并设置草稿状态。
 执行保存：`save(course)` 通过 Mapper 向数据库插入课程记录，数据库在这时生成自增 ID。
 回填并返回 ID：MyBatis-Plus 将生成的 ID 填入 course.id，Service 取出它，Controller 再包装成响应返回前端。
+
+
+
+-------------------------------------------------------------------------------------------
+## 前端模板  soybean
+https://github.com/soybeanjs/soybean-admin/releases/tag/v2.3.0
+终端下好前端工程需要的依赖 npx pnpm@12.10.1 install
+启动服务器 
+1. 保持 MySQL、Nacos、EamsSystemApplication（8084）、EamsCourseApplication（8085）运行。
+2. 在前端目录运行下面的开发命令，访问终端实际显示的端口。当前本机可用地址为 http://localhost:9528/，默认端口是 9527，被占用时会递增。
+3. 用数据库中已有账号登录。本轮验证使用 zhangsan，密码沿用你的现有测试密码，未修改该账号资料或密码。
+powershell运行：
+cd D:\Project1\eams-parent\eams-web
+npx pnpm@12.10.1 dev
+
+前端端口： http://localhost:9528/login          
+         账号：zhangsan
+         密码：123456
+
+-------------------------------------------------------------------------------------------
