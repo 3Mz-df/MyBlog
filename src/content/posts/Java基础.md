@@ -923,6 +923,8 @@ public class EduCourse {
 
 }
 - 装私有属性
+- 这里的注解：@TableId：`id` 是这个实体对应数据库表的主键字段。
+           IdType.AUTO：新增记录时，主键由数据库自增生成。
 tips：@Data 注解会自动生成 get 和 set 方法。注意属性名要跟数据库里的字段对的上，EduCourse类里的属性要参与数据库字段映射。courseName（实体类里） -> course_name（数据库里）。
 
 
@@ -1092,9 +1094,39 @@ Service 组装课程实体：创建 EduCourse 对象，填入名称、简介，�
 回填并返回 ID：MyBatis-Plus 将生成的 ID 填入 course.id，Service 取出它，Controller 再包装成响应返回前端。
 
 
+---------------
+## 课程详情查询（给一个课程 ID，返回这门课程的信息；查不到就提示“课程不存在”。）
+## 接口
+    //根据id查询课程详情
+    EduCourse getCourseDetail(Long id);
+
+
+## 实现
+    // 查询获取课程详情
+    @Override
+    public EduCourse getCourseDetail(Long id){
+        EduCourse course = getById(id);
+        if (course == null){
+            throw new BizException(ResultCode.NOT_FOUND,"课程不存在");
+        }
+        else {
+            return course;
+        }
+    }
+
+## Controller
+    @GetMapping("/{id}")
+    public Result<EduCourse> detail(@PathVariable("id") Long id){
+        EduCourse course = eduCourseService.getCourseDetail(id);
+        return Result.success(course);
+    }
+
+
+
 
 -------------------------------------------------------------------------------------------
-## 前端模板  soybean
+## 前端
+- 模板 soybean
 https://github.com/soybeanjs/soybean-admin/releases/tag/v2.3.0
 终端下好前端工程需要的依赖 npx pnpm@12.10.1 install
 启动服务器 
