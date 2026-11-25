@@ -927,7 +927,6 @@ public class EduCourse {
            IdType.AUTO：新增记录时，主键由数据库自增生成。
 tips：@Data 注解会自动生成 get 和 set 方法。注意属性名要跟数据库里的字段对的上，EduCourse类里的属性要参与数据库字段映射。courseName（实体类里） -> course_name（数据库里）。
 
-
 ## mapper数据库操作接口 （mybatis-plus提供）
 public interface EduCourseMapper extends BaseMapper<EduCourse> {
 }
@@ -1003,6 +1002,7 @@ tips：
 使用之前保存的 Service 对象，查询课程列表
 eduCourseService.list();
 
+------------------------------------
 ## 新增课程-接收新增数据的对象 DTO
 /**
  * 新增课程的请求参数
@@ -1096,12 +1096,12 @@ Service 组装课程实体：创建 EduCourse 对象，填入名称、简介，�
 
 ---------------
 ## 课程详情查询（给一个课程 ID，返回这门课程的信息；查不到就提示“课程不存在”。）
-## 接口
+## 课程详情查询-接口
     //根据id查询课程详情
     EduCourse getCourseDetail(Long id);
 
 
-## 实现
+## 课程详情查询-实现
     // 查询获取课程详情
     @Override
     public EduCourse getCourseDetail(Long id){
@@ -1114,16 +1114,147 @@ Service 组装课程实体：创建 EduCourse 对象，填入名称、简介，�
         }
     }
 
-## Controller
+
+## 课程详情查询-Controller
     @GetMapping("/{id}")
     public Result<EduCourse> detail(@PathVariable("id") Long id){
         EduCourse course = eduCourseService.getCourseDetail(id);
         return Result.success(course);
     }
+tips：@PathVariable("id") Long id 是从 URL 中提取的课程 ID,所以注解后的id要有{}表示这个是个可变的值，比如前端传个2 那么id就会是2。
+
+
+------------------
+## 课程分页查询-DTO
+//课程分页查询参数
+@Data
+public class CourseQueryDTO {
+
+    //页码 默认第一页
+    @NotNull(message = "页码不存在")
+    @Min(value = 1 , message = "页码不能小于一")
+    private Long pageNum = 1L;
+
+    //每页条数
+    @NotNull(message = "每页条数不能为空")
+    @Min(value = 1, message = "每页条数不能小于1")
+    private Long pageSize = 10L;
+
+    //课程名称关键词 不传就默认按名称筛选
+    @Size(max = 100, message = "关键词不得超过100个字符")
+    private String keyword;
+
+    //沿用当前课程状态，0草稿 1上架 2下架
+    @Min(value = 0, message = "课程状态不确定")
+    @Max(value = 2, message = "课程状态不确定")
+    private Integer status;
+}
+tips：@NotNull、`@Min` 这些注解，是给下面的成员变量“贴规则标签”，注解结尾不用分号，变量声明结尾才需要。
 
 
 
+## 课程分页查询-接口
+    //分页查询课程
+    PageResult<EduCourse> pageQuery(CourseQueryDTO courseQueryDTO);
 
+
+
+## 课程分页查询-实现
+// 分页查询课程
+@Override
+public PageResult<EduCourse> pageQuery(CourseQueryDTO queryDTO) {
+
+    // 1. 创建分页对象，设置页码和每页条数
+    Page<EduCourse> page = new Page<>(
+            queryDTO.getPageNum(),
+            queryDTO.getPageSize()
+    );
+
+    // 2. 创建查询条件清单
+    LambdaQueryWrapper<EduCourse> wrapper = new LambdaQueryWrapper<>();
+
+    // 有关键词时，按课程名称模糊查询
+    String keyword = queryDTO.getKeyword();
+    if (keyword != null && !keyword.isBlank()) {
+        wrapper.like(EduCourse::getCourseName, keyword.trim());
+    }
+
+    // 有状态时，按状态精确筛选
+    if (queryDTO.getStatus() != null) {
+        wrapper.eq(EduCourse::getStatus, queryDTO.getStatus());
+    }
+
+    // 按课程ID倒序排列，新课程排在前面
+    wrapper.orderByDesc(EduCourse::getId);
+
+    // 3. 执行查询，将分页要求和筛选条件一起交给MyBatis-Plus
+    this.page(page, wrapper);
+
+    // 4. 将查询结果包装成项目统一的分页格式
+    return PageResult.of(
+            page.getCurrent(),
+            page.getSize(),
+            page.getTotal(),
+            page.getRecords()
+    );
+}
+
+- this 表示“当前对象”。现在代码写在 EduCourseServiceImpl 的实例方法里，所以这里的 this 指向当前执行这个方法的课程 Service 对象。
+- MyBatis-Plus 已经提供的 page() 方法
+- getter 的命名约定：get + 属性名首字母大写  也就是 getPageNum()（对应参数类DTO里的的属性private Long pageNum;）
+- 
+
+tips：这里的 page(...) 是 MyBatis-Plus 提供的通用查询方法；`Page` 用来承载分页参数，以及查询得到的记录、总条数等信息。
+- 关于实体类和参数类
+![alt text](image-11.png)
+// 查询参数：描述“我要怎么查”
+CourseQueryDTO queryDTO;
+// 课程实体：描述“一门课程的数据”
+EduCourse course;
+
+
+## 课程分页查询-Mybatis-Plus配置
+/**
+ * MyBatis-Plus 配置
+ */
+@Configuration
+public class MybatisPlusConfig {
+
+    @Bean
+    public MybatisPlusInterceptor mybatisPlusInterceptor() {
+
+        // 创建 MyBatis-Plus 插件管理对象
+        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+
+        // 添加分页插件，指定使用 MySQL 数据库
+        interceptor.addInnerInterceptor(
+                new PaginationInnerInterceptor(DbType.MYSQL)
+        );
+
+        return interceptor;
+    }
+}
+
+- 往插件管理器对象加个适用于MySQL的分页处理器
+
+
+
+## 课程分页查询-Controller
+// 分页查询课程
+@GetMapping("/page")
+public Result<PageResult<EduCourse>> page(
+        @Valid @ModelAttribute @ParameterObject CourseQueryDTO queryDTO) {
+
+    // 调用课程业务方法，取得分页结果
+    PageResult<EduCourse> pageResult = eduCourseService.pageQuery(queryDTO);
+
+    // 使用统一响应格式返回
+    return Result.success(pageResult);
+}
+
+- @ModelAttribute：把请求参数填进 CourseQueryDTO。例如地址中的 pageNum=1，对应 DTO 的 pageNum 属性。
+@Valid：检查 DTO 上设置的规则，例如页码不能小于 1。
+@ParameterObject：让接口文档把 DTO 中的字段展开，方便在 Knife4j 中分别填写页码、关键词等参数。
 -------------------------------------------------------------------------------------------
 ## 前端
 - 模板 soybean
