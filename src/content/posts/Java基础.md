@@ -12,6 +12,8 @@ slug: java基础
 ## commit规范
 `feat` 新功能 `fix` 修 bug `docs` 文档 `chore` 杂活（依赖、配置、构建） `refactor` 重构（不改功能） `style` 格式（空格、缩进，不动逻辑）
 
+
+
 ## 业务异常
 ```plaintext
 @Getter
@@ -47,32 +49,25 @@ public class BizException extends RuntimeException{
 
 `this.code = code` 里的`this.` 就是为了在"字段名和参数名同名"时，指代"这个对象自己的字段"。
 
-> [!NOTE]
 > 这里都是构造方法，方法名必须跟类名相同，不能有返回值。
-## 构造方法是干嘛的
+
+- 构造方法是干嘛的
 造对象用的，当你写`new BizException("余额不足")` 时，Java 就会去执行`BizException(String msg)` 这个构造方法（调构造器），把对象"初始化"好（把 code、message 填进去）。
 
-## 为什么有 4 个名字都一样的构造方法？
+- 为什么有 4 个名字都一样的构造方法？
 因为它们的参数不一样 ，Java 允许"名字相同、参数不同"的方法共存，这叫 <span style="color:#ea580c">**重载**</span> 。
 
-`this(600, msg)` ，意思是： 在这个构造方法里，去调用本类另一个构造方法 （带括号的 this = 调构造器）。作用是"偷懒"，把活儿转给更全的那个构造器去干。
+- `this(600, msg)` ，意思是： 在这个构造方法里，去调用本类另一个构造方法 （带括号的 this = 调构造器）。作用是"偷懒"，把活儿转给更全的那个构造器去干。
 
-
-## 场景假设
+- 场景假设
 将来某处代码写了这么一句：
-
 `throw new BizException(502, "余额不足");`
-
 意思就是：造一个异常对象，编号是 502，内容写"余额不足"。这时 Java 会自动跑你这个构造方法，把`502` 和`"余额不足"` 传进去。
 
-## 现在跟着代码逐行走
-
+- 现在代码逐行走
 `public BizException(int code, String message) {`
-
 这一行 = 声明构造方法的门面，意思是"谁想造 BizException 对象，就得给我传一个`int` 和一个`String` "。传进来的值，Java 用 两个临时盒子 接住，盒子分别叫`code` 和`message` 。
-
 执行到这里时，两个盒子里装的是：
-
 ```plaintext
 code    = 502
 message = "余额不足"
@@ -81,46 +76,44 @@ message = "余额不足"
 然后
 
 `    super(message);`
-
 `super` 是"我爹"（父类 RuntimeException）。这句话 = "爹，我这儿有个消息，你先帮我存一份"。Java 规定异常类必须先跟父类报备消息，这一行 <span style="color:#ea580c">**必须写在第一句**</span> 。
-
 执行后：父类 RuntimeException 内部也存了一份`"余额不足"` （将来打日志、打印错误堆栈时要用它）。
 
 然后
 
 `    this.code = code;`
-
 拆开看：
+- `code` 
+（右边的）= 传进来的临时盒子，值`502`
 
-- `code` （右边的）= 传进来的临时盒子，值`502`
-- `this.code` （左边的）= 类自己那个正式的字段`private final int code`
+- `this.code` 
+（左边的）= 类自己那个正式的字段`private final int code`
 这句话 = "把传进来的 502，存进对象自己的 code 字段里"。
-
 执行后：
-
 `对象自己的 code 字段 = 502     ← 现在有值了`
-
 然后
-
 `    this.message = message;`
-
 同理
 
-## 全部执行完，你得到了一个对象
+- 全部执行完，你得到了一个对象
 ```plaintext
 BizException 对象
 ├── code    = 502
 ├── message = "余额不足"
 └── (父类 RuntimeException 里也存了 "余额不足")
 ```
-
 这就是`new BizException(502, "余额不足")` 造出来的完整东西。
 
-## 那 get 是在干嘛
+- 那 get 是在干嘛
 `getCode()` 和`getMessage()` 是`@Getter` 自动生成的两个方法，作用就是" 从包裹(传进来的枚举对象)里把值取出来 "：
 
-- `resultCode.getCode()` → 从包裹里取出`401`
-- `resultCode.getMessage()` → 从包裹里取出`"未登录"`
+- `resultCode.getCode()` 
+从包裹里取出`401`
+
+- `resultCode.getMessage()` 
+从包裹里取出`"未登录"`
+
+
 ---------------------------------------------------------------------------------------------
 ## 当前登录用户上下文
 ```plaintext
@@ -175,6 +168,9 @@ public final class UserContext {
 }
 ```
 ---------------------------------------------------------------------------------------------
+
+
+
 ## 工具类 
 ```plaintext
 public final class ***{
@@ -243,6 +239,9 @@ public Long getUserId(){
 > [!TIP]
 > “手环检验”在真检验（token相关）后再检验，确保用户已登录，防止未登录者修改业务。token是门票，requireLogin是手环（进场上线到线程池），进场看门票和手环，出场撕掉手环（下线，后面的remov方法），避免任务完成的线程信息残留在线程池里。
 ---------------------------------------------------------------------------------------------
+
+
+
 ## 全局异常处理器
 ```plaintext
 /**
@@ -293,6 +292,9 @@ public class GlobalExceptionHandler {
 ⑥ 前端收到 {"code":400, "message":"...", ...}
 }
 ```
+
+
+
 ## 网关
 网关做的事就叫 路由转发 ：`http://localhost:8080/system/xxx` → 自动转发到`eams-system` 服务。
 
@@ -301,18 +303,20 @@ public class GlobalExceptionHandler {
 用汽油车/柴油车打比方：一辆车只能装一种发动机，两个都塞进去就当场报错。所以：
  网关里绝对不能加`spring-boot-starter-web` ，否则启动直接冲突报错。
 
+
+
 ## MyBatis-Plus
 //继承BaseMapper用
 
-- 数据源 ：怎么告诉 Spring「数据库在哪、账号密码」。
-  # 数据源
+
+
+## 数据源
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: "jdbc:mysql://127.0.0.1:3306/eams?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true"
     username: root
     password: "****"
 
-- 建表 → 实体类 → Mapper 三层对应关系，以及`@TableName` 、`@TableId` 两个翻译锚点。
   /**
   * 系统用户实体
  */
@@ -330,14 +334,12 @@ public class SysUser {
     private LocalDateTime createTime;
 }
 
-- MyBatis-Plus 的`BaseMapper` 白送增删改查，全程没手写一句 SQL。
 /**
  * 用户Mapper 继承BaseMapper
  */
 public interface SysUserMapper extends BaseMapper<SysUser> {
 }
 
-- 构造器注入 ：Spring 怎么把 Mapper「塞」进 Controller。返回 JSON ：Java 对象自动序列化给浏览器
 /**
  * 检验数据库连通
  */
@@ -357,7 +359,15 @@ public class UserController {
     }
 }
 
+- 数据源 ：怎么告诉 Spring「数据库在哪、账号密码」。
+
+- 建表 → 实体类 → Mapper 三层对应关系，以及`@TableName` 、`@TableId` 两个翻译锚点。
+
+
+
 ## MyBatis-Plus 的 Service 也是"白送"的，继承两个套件`IService` +`ServiceImpl` ，跟 Mapper 一样自动拥有一堆方法（`list` /`getById` /`save` /`updateById` …）。
+
+
 
 ## 分页查询\
 ///**
@@ -375,6 +385,8 @@ public class MybatisPlusConfig {
     }
 }
 //SysUserService 增加 pageQuery 分页方法来用
+
+
 
 ## 补全增删改
 // 新增用户：请求体里塞一段 JSON，Spring 自动翻译成 SysUser 对象
@@ -398,10 +410,12 @@ public Result<Void> delete(@PathVariable Long id){
     return Result.success();
 }
 
+- `@RequestBody` 
+负责"把 JSON 翻译成`SysUser` 对象"；
 
-## 注解
-  - `@RequestBody` ：负责"把 JSON 翻译成`SysUser` 对象"；
-  - `@Valid` ：负责"翻译完之后，按`SysUser` 里写好的注解（`@NotBlank` 、`@Size` 等校验注解），把这个对象检查一遍"。
+- `@Valid` 
+负责"翻译完之后，按`SysUser` 里写好的注解（`@NotBlank` 、`@Size` 等校验注解），把这个对象检查一遍"。
+
 
 
 ## Knife4j/OpenAPI接口测试文档配置
@@ -441,7 +455,10 @@ knife4j:
   setting:
     language: zh_cn
 
-----------------------------------------------------------
+
+
+
+## DLC ----------------------------------------------------------
 ## 关于Spring：
 Spring 是地基，Spring Boot 是盖在地基上的“精装脚手架” 。两者并非并列的替代关系，Spring Boot 并不是另一个新框架；它只是对 Spring 的自动化封装。
 
@@ -466,7 +483,11 @@ Spring Boot 不做新功能 ，它只做三件事，把上面那套拼装活儿�
 - `@Bean` = 往工具箱里"放一件工具"
 - `@Configuration` = 告诉 Spring："这个类里放工具了，帮我登记一下。"
 好处：以后谁要用这件工具， 不用自己`new` ，写个`@Autowired` ，Spring 就从工具箱里递给你。全项目共用同一个实例，而且以后想换，只改这一个地方。
-----------------------------------------------------------
+## DLC ----------------------------------------------------------
+
+
+
+
 ## JWT
 //JWT工具类
 public class JwtUtil {
@@ -525,15 +546,26 @@ public class JwtUtil {
         //登陆成功
         return JwtUtil.generateToken(user.getId(), user.getUsername());
         }
-- `LambdaQueryWrapper` ：MyBatis-Plus 的"链式查询条件"，`.eq(字段, 值)` = "字段等于值"，不用手写 SQL。`getOne(..., false)` 里的`false` 意思是"如果查到多条不抛异常，取第一条"。
-- `passwordEncoder.matches(明文, 密文)` ：BCrypt 是单向的，只能"比对"不能"解密"，返回 true/false。
-- 为什么统一提示"用户名或密码错误" ：不告诉攻击者"到底是账号不存在还是密码错"，防止恶意试探出哪些用户名存在。
-- 失败时抛`BizException(ResultCode.UNAUTHORIZED, ...)` ，会被 GlobalExceptionHandler ` 返回。这就是项目里"业务异常统一抛出"的用法。
+
+- `LambdaQueryWrapper`
+MyBatis-Plus 的"链式查询条件"，`.eq(字段, 值)` = "字段等于值"，不用手写 SQL。`getOne(..., false)` 里的`false` 意思是"如果查到多条不抛异常，取第一条"。
+
+- `passwordEncoder.matches(明文, 密文)` 
+BCrypt 是单向的，只能"比对"不能"解密"，返回 true/false。
+
+- 为什么统一提示"用户名或密码错误" 
+不告诉攻击者"到底是账号不存在还是密码错"，防止恶意试探出哪些用户名存在。
+
+- 失败时抛`BizException(ResultCode.UNAUTHORIZED, ...)` 
+会被 GlobalExceptionHandler ` 返回 这就是项目里"业务异常统一抛出"的用法。
+
+
 
 ## 密码加密方式
 BCrypt 每次加密同一份明文，结果都不一样，因为他会再密文里加一个随机的盐（随机字符）
 比如同样123的密码，每次加密出的结果都不同就是因为盐不一样。这样数据库里存的每个人的密码密文都是独立的。
 这里用 matches(明文, 密文) 去检验那个数据库里存好的盐；
+
 `matches` 内部干的事是这样：
 1. 从数据库的密文里取出盐。
 2. 用这个 同一把盐 + 你输入的明文，重新算一遍哈希。
@@ -541,7 +573,10 @@ BCrypt 每次加密同一份明文，结果都不一样，因为他会再密文�
 if (user == null || !passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
             throw new BizException(ResultCode.UNAUTHORIZED, "用户名或密码错误");
          }
+        
 tips：`!` 是取反，意思是" 只要比对不过（false），就走进 if 里抛异常 "。
+
+
 
 ## 盐
 `salt` （盐值）。它是密码学里一个通用概念，不光 BCrypt 用，SHA-256 加盐、PBKDF2、Argon2 这些加密方案全都用。
@@ -550,10 +585,15 @@ tips：`!` 是取反，意思是" 只要比对不过（false），就走进 if �
 加盐：    hash("123456" + "随机盐A")      → 张三的结果 ≠ 李四的结果
 
 
+
 ## DTO
 `password` 加的`@JsonIgnore` ，其实会 同时屏蔽两个方向 ：
-- 输出 （返回给前端）：密码被隐藏 ✅ 这是我们要的。
-- 输入 （前端传进来）：密码也读不进来 ❌ 这是副作用。
+
+- 输出 （返回给前端）
+密码被隐藏 ✅ 这是我们要的。
+
+- 输入 （前端传进来）
+密码也读不进来 ❌ 这是副作用。
 所以`SysUser` 不能 用来当登录的请求体（否则 password 根本收不到）。而且登录只需要`username + password` 两个字段，没必要塞整个实体。
 
 结论：建一个专门的`LoginDTO` 来收登录参数。 DTO = 专门给前端"传进/传出"用的对象 ，跟数据库实体分开，这就是之前说的"彻底隔离"。
@@ -635,24 +675,28 @@ public class WebMvcConfig implements WebMvcConfigurer {
     }
 }
 
-1.`Authorization: Bearer xxx` 是啥？
-
+- `Authorization: Bearer xxx` 是啥？
 这是 HTTP 行业约定：token 放在请求头`Authorization` 里，格式`Bearer 空格 token` 。`Bearer` 是"持有者"的意思，可以理解为"我拿这个凭证证明我是谁"。前端调接口时要在请求头带上它。
 
-2. 为什么拦截器里要"自己写 JSON"，而不是抛异常？
-
-还记得我们之前的`GlobalExceptionHandler` 吗？它其实 管不到拦截器 。因为：
-
-- 拦截器的`preHandle` 在 Controller 之前 执行。
-- `@RestControllerAdvice` 只能捕获 Controller 里 抛出的异常。
-- 拦截器里抛异常，会直接变成 500 错误页，不会变成我们想要的 JSON。
+- 为什么拦截器里要"自己写 JSON"，而不是抛异常？
+之前的`GlobalExceptionHandler` 管不到拦截器 。因为：
+拦截器的`preHandle` 在 Controller 之前 执行。
+`@RestControllerAdvice` 只能捕获 Controller 里 抛出的异常。
+拦截器里抛异常，会直接变成 500 错误页，不会变成我们想要的 JSON。
 所以拦截器里要 手动 把 401 和错误 JSON 写回`response` ，然后`return false` 拦下。
 
-3.`addPathPatterns("/**")` +`excludePathPatterns(...)` 就是"看门规则"
+- `addPathPatterns("/**")` +`excludePathPatterns(...)` 
+就是"看门规则"
 
-- `addPathPatterns` ：大爷站哪些门（所有门`/**` ）。
-- `excludePathPatterns` ：大爷手里的"免检名单"（登录接口、文档页面不用查证件）。
-注意： 登录接口`login` 必须放行 ，否则你连登录都登录不了，就死锁了。
+- `addPathPatterns` 
+大爷站哪些门（所有门`/**` ）。
+
+- `excludePathPatterns` 
+大爷手里的"免检名单"（登录接口、文档页面不用查证件）。
+
+注意： 登录接口`login` 必须放行 ，否则连登录都登录不了，就死锁了。
+
+
 
 
 ## 拦截器类里的线程 用上UserContext
@@ -679,7 +723,6 @@ try {
 
         //token 合法 → 放行
         return true;
-    }
 
     // 请求结束时调用：清空线程池
     @Override
@@ -687,58 +730,54 @@ try {
         UserContext.remove();
     }
 
-1. 为什么要`afterCompletion` 里`UserContext.remove()` ？
-
+- 为什么要`afterCompletion` 里`UserContext.remove()` ？
 Tomcat 用 线程池 复用线程。一个请求处理完，线程会被拿去处理下一个请求。如果不清空抽屉：
-
-- 下一个请求可能拿到 上一个请求留下的 userId → 严重的话会"串号"（A 的操作被当成 B 的）。
-- 抽屉里的对象引用一直不被释放 → 内存泄漏。
+下一个请求可能拿到 上一个请求留下的 userId → 严重的话会"串号"（A 的操作被当成 B 的）。
+抽屉里的对象引用一直不被释放 → 内存泄漏。
 所以"用完必须清"，这是 ThreadLocal 的铁律。
 
-2.`userIdObj.toString()` 这个写法是为什么？
-
+- `userIdObj.toString()` 这个写法是为什么？
 我们存 token 时`userId` 是`Long` 。但 token 本质是 JSON，JSON 里`1` 这种小数字，解析回来时 可能是`Integer` 也可能是`Long` 。如果直接`(Long) claims.get("userId")` 强转，遇到`Integer` 就会 ClassCastException。用`Long.valueOf(toString())` 两种都能安全转。
 
-3.`get()` vs`requireLogin()`
-
-`UserContext` 里有两个取法（你已经写好了）：
+- `get()` vs`requireLogin()`
+`UserContext` 里有两个取法（已经写好了）：
 
 - `get()` → 可能返回 null（宽松）。
+
 - `requireLogin()` → 没登录就抛 401（严格）。
 
 ## JWT至此；
-- JWT：签 token、验 token、Header 里怎么传。
-- BCrypt：盐、单向哈希、`encode` /`matches` 。
-- Spring DI：`@Component` 、`@Bean` 、构造器注入、按类型注入。
-- 拦截器：`HandlerInterceptor` 、放行规则、为什么拦截器里要手动写 JSON。
-- ThreadLocal +`UserContext` ：上下文传递、为什么用完必须`remove()` 。
+JWT：签 token、验 token、Header 里怎么传。
+BCrypt：盐、单向哈希、`encode` /`matches` 。
+Spring DI：`@Component` 、`@Bean` 、构造器注入、按类型注入。
+拦截器：`HandlerInterceptor` 、放行规则、为什么拦截器里要手动写 JSON。
+ThreadLocal +`UserContext` ：上下文传递、为什么用完必须`remove()` 。
 ## 现在系统具备的能力
-- 用户登录 （JWT 签发 token）
-- 用户增删改查 （分页、按 id 查、新增、更新、删除）
-- 密码安全 （新增/更新都 BCrypt 加密，接口不泄露密码）
-- 接口鉴权 （不带 token 返回 401）
-- /current （返回当前登录用户完整信息）
+用户登录 （JWT 签发 token）
+用户增删改查 （分页、按 id 查、新增、更新、删除）
+密码安全 （新增/更新都 BCrypt 加密，接口不泄露密码）
+接口鉴权 （不带 token 返回 401）
+/current （返回当前登录用户完整信息）
 
 
 
 
 ## 分页查询增强 
-- 给`/list` 加上「关键词搜索 + 按用户类型/状态筛选」。
 
+- 给`/list` 加上「关键词搜索 + 按用户类型/状态筛选」。
 现在`/list` 只能干巴巴地翻页。增强后，前端可以传这 3 个 可选 参数：
 `keyword` 关键词，模糊搜「用户名」或「手机号」 搜`张` 能匹配到"张三"
 `userType` 按用户类型筛选 只查`1` 管理员 
 `status` 按状态筛选 只查`1` 正常
 
+
+
+
 ## LambdaQueryWrapper
 `LambdaQueryWrapper` 就是一张「 筛选条件清单 」。你先往清单上一条条写条件，写完后交给查询方法，它按清单去数据库筛数据。
 常用三个"写条件"的动作：
-- `.like(字段, 值)` —— 模糊匹配 ，字段里"包含"这个值就命中（搜关键词用它）
-- `.eq(字段, 值)` —— 等于 ，字段的值完全等于这个值（精确筛选用它）
-- `.and(...).or()` —— 把括号里的多个条件用「 或 」连起来（"用户名 或 手机号 匹配关键词"）
-动态条件 是关键：用`if` 判断， 传了才往清单上加，没传就不加 。这样参数可选。
 
-## 具体操作
+- 具体操作
 接口加上参数
 String keyword, Integer userTpye, Integer status
 实现
@@ -749,40 +788,46 @@ String keyword, Integer userTpye, Integer status
             wrapper.and(w -> w.like(SysUser::getUsername, keyword)
                     .or().like(SysUser::getPhone, keyword));
         }
-- tips：getter 的命名规则（JavaBean 规范）
-        Lombok 的`@Data` 自动帮你生成 getter 时，有一套固定规则：
-        `get` + 字段名首字母大写
-        所以字段`status` 自动生成的 getter 方法叫`getStatus` （get + Status）。
-- tips：`String` 文本/字符串 关键词`keyword` 、用户名、手机号、邮箱、地址 
-        `Long` 整数 （64 位（19位数），能存 null） 页码`pageNum` 、条数`pageSize` 、主键 id 
-        `Integer` 整数 （32 位（10位数），能存 null） 用户类型`userType` 、状态`status`
-        注意：这里手机号应该是一种标识（后续不用他），所以这里用`String` 而不是`Long`，而且Long会把0开头的手机号的0去掉。
 
-## lambdaQueryWrapper
-wrapper.and(w -> w.like(SysUser::getUsername, keyword)
-                  .or().like(SysUser::getPhone, keyword));
+- `wrapper.and(...)` 
+往清单上加「 一组 条件」，这组条件内部用「或」连接，外面包一层括号。
 
-- `wrapper.and(...)` —— 往清单上加「 一组 条件」，这组条件内部用「或」连接，外面包一层括号。
-- `w -> ...` —— 这是一个 lambda 表达式 ，`w` 代表「这组括号里的一个小清单」。可以读成：" 在这个小清单 w 上，做下面这些操作 "。
-- `w.like(SysUser::getUsername, keyword)` —— 在 w 上加一条：username 字段 包含 keyword。
-- `.or()` —— 或者。
-- `.like(SysUser::getPhone, keyword)` —— 再加一条：phone 字段 包含 keyword。
-`and` 包一个括号，括号里用`or` 连两个`like` ，实现"用户名或手机号模糊搜索"。
+- `w -> ...`
+这是一个 lambda 表达式 ，`w` 代表「这组括号里的一个小清单」。可以读成：" 在这个小清单 w 上，做下面这些操作 "。
 
+- `w.like(SysUser::getUsername, keyword)` 
+在 w 上加一条：username 字段 包含 keyword。
 
+- `and`( like().or().like() )
+ 包一个括号，括号里用`or` 连两个`like` ，实现"用户名或手机号模糊搜索"。
 
+- `.or()` 
+或者。
 
-if (userType != null) {
+- `.like(SysUser::getPhone, keyword)` 
+再加一条：phone 字段 包含 keyword。
+
+- if (userType != null) {
      wrapper.eq(SysUser::getUserType, userType); }
 如果传了`userType` ，就往清单加一条：`userType 等于 这个值` 。
 `eq` = equal = 等于（精确匹配）。
 
-if (status != null) {
+- if (status != null) {
      wrapper.eq(SysUser::getStatus, status); }
 同理
 一般表设计为：
 `userType` 用户类型 `1` = 管理员/老师，`0` = 普通用户 
 `status` 账号状态 `1` = 正常启用，`0` = 禁用/停用
+
+- tips：getter 的命名规则（JavaBean 规范）
+        Lombok 的`@Data` 自动帮你生成 getter 时，有一套固定规则：
+        `get` + 字段名首字母大写
+        所以字段`status` 自动生成的 getter 方法叫`getStatus` （get + Status）。
+
+- tips：`String` 文本/字符串 关键词`keyword` 、用户名、手机号、邮箱、地址 
+        `Long` 整数 （64 位（19位数），能存 null） 页码`pageNum` 、条数`pageSize` 、主键 id 
+        `Integer` 整数 （32 位（10位数），能存 null） 用户类型`userType` 、状态`status`
+        注意：这里手机号应该是一种标识（后续不用他），所以这里用`String` 而不是`Long`，而且Long会把0开头的手机号的0去掉。
 
 - tips：.eq（字段, 值）方法里面有两个参数
         ## 参数 1：SysUser::getUserType —— 指定"对哪个字段"
@@ -792,11 +837,14 @@ if (status != null) {
         ## 参数 2：userType —— 指定"等于什么值"
         这是你`pageQuery` 方法的 入参 （前端传来的那个整数，比如`1` ）。 
         最后=1的这个条件会加到清单里，在最后的最后同分页对象一起传给查询方法
+
+
 ## 最后执行 返回
         //执行分页查询 条件清单一并上交
         this.page(page, wrapper);
         //返回分页结果
         return PageResult.of(page.getCurrent(), page.getSize(), page.getTotal(), page.getRecords());
+
 - tips：`this.page(page, wrapper)` 
          是在调用 MyBatis-Plus 白送 的一个方法（和之前用的`getById` 、`save` 、`updateById` 一样，都是继承`ServiceImpl` 得到的）。
        `this` —— 当前这个 service 对象（`SysUserServiceImpl` 实例）
@@ -806,7 +854,6 @@ if (status != null) {
             ③ 拼出 SQL：SELECT ... WHERE ... LIMIT ...
             ④ 去数据库执行
             ⑤ 把查到的结果填回 page 对象
- 
        `.of`
         本质就是： 帮你`new` 一个`PageResult` 对象、填好值、返回给你 。它把「创建 + 赋值」打包成了一个方法。
         他这里做了：
@@ -815,8 +862,8 @@ if (status != null) {
         这是个静态方法
         静态方法：直接类名.方法名() 调用
         实例方法：实例对象.方法名() 调用（要先new对象）
-
         这里用PageResult是因为分页要返回多种信息一个对象不好装多在Result里嵌套个PageResult来专门装分页返回信息
+
 
 
 ## Controller的list接前端
