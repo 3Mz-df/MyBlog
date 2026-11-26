@@ -15,6 +15,14 @@ slug: java基础
 
 
 ## 业务异常
+
+> **项目位置**
+>
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/exception/BizException.java`：业务异常类 `BizException`；下面的四个重载构造方法都写在这个类里。
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/enums/ResultCode.java`：关联的响应码枚举 `ResultCode`，如 `UNAUTHORIZED`、`BUSINESS_ERROR`。
+>
+> 以下路径从项目根目录 `/eams-parent/` 写起；`src/main/java` 后的 `com/eams/...`，对应 IDE 中显示的 `com.eams...` 包。
+
 ```plaintext
 @Getter
 public class BizException extends RuntimeException{
@@ -116,6 +124,11 @@ BizException 对象
 
 ---------------------------------------------------------------------------------------------
 ## 当前登录用户上下文
+
+> **项目位置**
+>
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/context/UserContext.java`：公共模块中的 `UserContext` 类，包含 `USER_HOLDER`、`set(...)`、`get()`、`getUserId()`、`requireLogin()`、`remove()`，以及内部类 `UserInfo`。
+
 ```plaintext
 /**
  * 当前登录用户上下文：用户信息挂在当前线程上
@@ -172,6 +185,13 @@ public final class UserContext {
 
 
 ## 工具类 
+
+> **项目位置**
+>
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/context/UserContext.java`：本节工具类写法对应 `UserContext`：私有构造方法、静态 `ThreadLocal` 和下面逐个讲解的静态方法都在这里。`UserInfo` 也是这个文件中的内部类。
+>
+> `ThreadLocal` 由 JDK 提供，`@Data` 由 Lombok 提供；项目里查看它们的使用位置即可，自动生成的 getter 不需要另建源码文件。
+
 ```plaintext
 public final class ***{
     private ***(){}
@@ -243,6 +263,13 @@ public Long getUserId(){
 
 
 ## 全局异常处理器
+
+> **项目位置**
+>
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/exception/GlobalExceptionHandler.java`：类 `GlobalExceptionHandler`；业务异常处理看 `handleBizException(...)`，请求体校验异常处理看 `handleMethodArgumentNotValid(...)`。
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/api/Result.java`：统一返回对象 `Result<T>`；本节返回失败信息时调用这里的 `failed(...)`。
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/enums/ResultCode.java`：处理器用到的 `VALIDATE_FAILED`、`SYSTEM_ERROR` 等响应码。
+
 ```plaintext
 /**
  * 全局异常处理器 接所有异常 转成Result结构返回
@@ -296,6 +323,13 @@ public class GlobalExceptionHandler {
 
 
 ## 网关
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-gateway/src/main/resources/application.yml`：网关服务配置；路由转发看 `spring.cloud.gateway.routes`，其中 `/system/**` 对应 `lb://eams-system`。
+> - `/eams-parent/eams-modules/eams-gateway/pom.xml`：网关依赖配置，查看 `spring-cloud-starter-gateway`。
+> - `/eams-parent/eams-modules/eams-gateway/src/main/java/com/eams/gateway/EamsGatewayApplication.java`：网关启动入口 `EamsGatewayApplication.main(...)`。
+
 网关做的事就叫 路由转发 ：`http://localhost:8080/system/xxx` → 自动转发到`eams-system` 服务。
 
 //一个必须记住的坑
@@ -306,11 +340,26 @@ public class GlobalExceptionHandler {
 
 
 ## MyBatis-Plus
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/mapper/SysUserMapper.java`：用户数据库操作接口 `SysUserMapper`，通过 `extends BaseMapper<SysUser>` 使用通用增删改查。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/entity/SysUser.java`：Mapper 的泛型实体 `SysUser`，通过 `@TableName` 对应用户表。
+> - `/eams-parent/eams-modules/eams-system/pom.xml`：该模块引入 MyBatis-Plus 的位置，依赖名为 `mybatis-plus-spring-boot3-starter`。
+
 //继承BaseMapper用
 
 
 
 ## 数据源
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-system/src/main/resources/application.yml`：本节开头的数据源配置放在 `spring.datasource` 下。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/entity/SysUser.java`：本节的用户实体 `SysUser`，对应 `sys_user` 表。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/mapper/SysUserMapper.java`：本节的数据库操作接口，继承 `BaseMapper<SysUser>`。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/controller/UserController.java`：本节数据库连通测试的 `list()` 所在文件；早期直接调用 Mapper 的写法仍保留在该文件顶部的注释中，当前接口通过 Service 查询。
+
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: "jdbc:mysql://127.0.0.1:3306/eams?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true"
@@ -367,9 +416,24 @@ public class UserController {
 
 ## MyBatis-Plus 的 Service 也是"白送"的，继承两个套件`IService` +`ServiceImpl` ，跟 Mapper 一样自动拥有一堆方法（`list` /`getById` /`save` /`updateById` …）。
 
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/service/SysUserService.java`：用户业务接口，`extends IService<SysUser>` 写在这里。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/service/impl/SysUserServiceImpl.java`：用户业务实现类，`extends ServiceImpl<SysUserMapper, SysUser>` 与 `implements SysUserService` 写在这里。
+>
+> `IService`、`ServiceImpl` 是 MyBatis-Plus 依赖中的类型；项目中自己的文件是上面的接口和实现类。
+
+
 
 
 ## 分页查询\
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/config/MybatisPlusConfig.java`：系统服务的分页插件配置；查看 `MybatisPlusConfig.mybatisPlusInterceptor()` 中添加的 `PaginationInnerInterceptor`。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/service/SysUserService.java`：声明用户分页方法 `pageQuery(...)` 的业务接口。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/service/impl/SysUserServiceImpl.java`：实现 `pageQuery(...)`：创建 `Page<SysUser>`、执行分页并封装结果。
+
 ///**
  * MyBatis plus配置：分页插件
  */
@@ -389,6 +453,13 @@ public class MybatisPlusConfig {
 
 
 ## 补全增删改
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/controller/UserController.java`：用户接口类；新增、修改、删除分别定位 `add(...)`、`update(...)`、`delete(...)`，接口前缀为 `/system/user`。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/service/impl/SysUserServiceImpl.java`：当前新增和修改的业务处理看 `addUser(...)`、`updateUser(...)`；删除使用继承的 `removeById(...)`。
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/api/Result.java`：接口中 `Result.success(...)` 对应的统一响应封装。
+
 // 新增用户：请求体里塞一段 JSON，Spring 自动翻译成 SysUser 对象
 @PostMapping
 public Result<Void> add(@RequestBody SysUser user){
@@ -419,6 +490,14 @@ public Result<Void> delete(@PathVariable Long id){
 
 
 ## Knife4j/OpenAPI接口测试文档配置
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-system/pom.xml`：本节 `pom:` 部分，Knife4j starter 依赖声明在这里。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/config/Knife4jConfig.java`：本节 `config:` 部分，类 `Knife4jConfig` 的 `openAPI()` 方法配置接口文档标题、描述和版本。
+> - `/eams-parent/eams-modules/eams-system/src/main/resources/application.yml`：本节 `yml:` 部分，查看顶层的 `springdoc` 和 `knife4j` 配置。
+> - `/eams-parent/pom.xml`：父工程统一管理 Knife4j 依赖版本的位置。
+
 pom:
         <!-- Knife4j -->
         <dependency>
@@ -489,6 +568,15 @@ Spring Boot 不做新功能 ，它只做三件事，把上面那套拼装活儿�
 
 
 ## JWT
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/util/JwtUtil.java`：JWT 工具类；签发 token 看 `generateToken(...)`，解析 token 看 `parseToken(...)`。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/service/SysUserService.java`：本节“接口”部分，`login(LoginDTO loginDTO)` 的声明。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/service/impl/SysUserServiceImpl.java`：本节“实现”部分，构造方法注入 `PasswordEncoder`，`login(...)` 校验账号密码并调用 `JwtUtil.generateToken(...)`。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/dto/LoginDTO.java`：登录方法接收的参数对象，保存 `username` 和 `password`。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/controller/UserController.java`：对外的登录入口 `login(...)`，对应 `POST /system/user/login`。
+
 //JWT工具类
 public class JwtUtil {
     //token
@@ -562,6 +650,12 @@ BCrypt 是单向的，只能"比对"不能"解密"，返回 true/false。
 
 
 ## 密码加密方式
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/config/SecurityConfig.java`：`SecurityConfig.passwordEncoder()` 创建并注册 `BCryptPasswordEncoder`。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/service/impl/SysUserServiceImpl.java`：本节密码比对的 `if` 在 `login(...)` 内；新增、修改密码的 `encode(...)` 分别在 `addUser(...)`、`updateUser(...)` 内。
+
 BCrypt 每次加密同一份明文，结果都不一样，因为他会再密文里加一个随机的盐（随机字符）
 比如同样123的密码，每次加密出的结果都不同就是因为盐不一样。这样数据库里存的每个人的密码密文都是独立的。
 这里用 matches(明文, 密文) 去检验那个数据库里存好的盐；
@@ -579,6 +673,14 @@ tips：`!` 是取反，意思是" 只要比对不过（false），就走进 if �
 
 
 ## 盐
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/config/SecurityConfig.java`：本节概念在项目中的对应入口是 `passwordEncoder()`，使用 `BCryptPasswordEncoder`。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/service/impl/SysUserServiceImpl.java`：查看 `addUser(...)`、`updateUser(...)` 中的 `encode(...)` 和 `login(...)` 中的 `matches(...)`。
+>
+> 盐的生成、保存格式和比对由 BCrypt 依赖内部处理，仓库中没有单独的盐值工具类。
+
 `salt` （盐值）。它是密码学里一个通用概念，不光 BCrypt 用，SHA-256 加盐、PBKDF2、Argon2 这些加密方案全都用。
 盐就是一段随机字符串 。加密前，把"密码 + 盐"混在一起再哈希。
 不加盐：  hash("123456")                 → 所有人结果都一样
@@ -587,6 +689,13 @@ tips：`!` 是取反，意思是" 只要比对不过（false），就走进 if �
 
 
 ## DTO
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/dto/LoginDTO.java`：本节专门接收登录参数的 DTO，字段为 `username`、`password`。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/entity/SysUser.java`：本节对照的数据库实体 `SysUser`，密码字段的 JSON 注解在该文件中。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/controller/UserController.java`：在 `login(@Valid @RequestBody LoginDTO loginDTO)` 处接收这个 DTO。
+
 `password` 加的`@JsonIgnore` ，其实会 同时屏蔽两个方向 ：
 
 - 输出 （返回给前端）
@@ -599,6 +708,13 @@ tips：`!` 是取反，意思是" 只要比对不过（false），就走进 if �
 结论：建一个专门的`LoginDTO` 来收登录参数。 DTO = 专门给前端"传进/传出"用的对象 ，跟数据库实体分开，这就是之前说的"彻底隔离"。
 ----------------------------------------------------------
 ## JWT 拦截器 + 注册放行路径
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/interceptor/JwtInterceptor.java`：本节第一个类 `JwtInterceptor`；`preHandle(...)` 检查 token，`reject(...)` 写出 401 响应。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/config/WebMvcConfig.java`：本节第二个类 `WebMvcConfig`；`addInterceptors(...)` 注册拦截器，`excludePathPatterns(...)` 配置放行路径。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/util/JwtUtil.java`：拦截器调用的 token 解析方法 `parseToken(...)`。
+
 /**
  * JWT 登录拦截器：校验请求头里的 token，不合法就拦截返回 401
  */
@@ -700,6 +816,12 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
 
 ## 拦截器类里的线程 用上UserContext
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/interceptor/JwtInterceptor.java`：`preHandle(...)` 的 `try` 块解析 claims 并调用 `UserContext.set(...)`；请求结束时在 `afterCompletion(...)` 中调用 `UserContext.remove()`。
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/context/UserContext.java`：用户信息的实际存放位置，查看 `USER_HOLDER` 和内部类 `UserInfo`。
+
   JwtInterceptor类下
 
 try {
@@ -764,6 +886,13 @@ ThreadLocal +`UserContext` ：上下文传递、为什么用完必须`remove()` 
 
 ## 分页查询增强 
 
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/controller/UserController.java`：`list(...)` 接收 `pageNum`、`pageSize`、`keyword`、`userType`、`status`，接口为 `GET /system/user/list`。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/service/SysUserService.java`：同步声明带筛选参数的 `pageQuery(...)`。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/service/impl/SysUserServiceImpl.java`：在 `pageQuery(...)` 中组合关键词、用户类型和状态条件。
+
+
 - 给`/list` 加上「关键词搜索 + 按用户类型/状态筛选」。
 现在`/list` 只能干巴巴地翻页。增强后，前端可以传这 3 个 可选 参数：
 `keyword` 关键词，模糊搜「用户名」或「手机号」 搜`张` 能匹配到"张三"
@@ -774,6 +903,13 @@ ThreadLocal +`UserContext` ：上下文传递、为什么用完必须`remove()` 
 
 
 ## LambdaQueryWrapper
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/service/impl/SysUserServiceImpl.java`：本节 `wrapper` 的创建和 `and/like/or/eq` 条件都位于用户分页方法 `pageQuery(...)` 中。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/service/SysUserService.java`：本节“接口加上参数”对应 `pageQuery(...)` 的方法声明。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/entity/SysUser.java`：方法引用 `SysUser::getUsername`、`getPhone`、`getUserType`、`getStatus` 对应的实体字段；getter 由该类的 `@Data` 生成。
+
 `LambdaQueryWrapper` 就是一张「 筛选条件清单 」。你先往清单上一条条写条件，写完后交给查询方法，它按清单去数据库筛数据。
 常用三个"写条件"的动作：
 
@@ -840,6 +976,12 @@ String keyword, Integer userTpye, Integer status
 
 
 ## 最后执行 返回
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/service/impl/SysUserServiceImpl.java`：`pageQuery(...)` 末尾的 `this.page(page, wrapper)` 和 `return PageResult.of(...)`。
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/api/PageResult.java`：分页返回对象；静态方法 `of(...)` 填入页码、条数、总数、列表并计算总页数。
+
         //执行分页查询 条件清单一并上交
         this.page(page, wrapper);
         //返回分页结果
@@ -867,6 +1009,13 @@ String keyword, Integer userTpye, Integer status
 
 
 ## Controller的list接前端
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/controller/UserController.java`：类 `UserController` 中的 `list(...)` 方法；类上的 `/system/user` 与方法上的 `/list` 拼成完整接口路径。
+> - `/eams-parent/eams-modules/eams-system/src/main/java/com/eams/system/service/SysUserService.java`：Controller 调用的 `pageQuery(...)` 业务接口。
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/api/Result.java`：最外层 `Result.success(...)` 的定义；其 `data` 中装的是 `PageResult<SysUser>`。
+
 @GetMapping("/list")
     public Result<PageResult<SysUser>> list(
             @RequestParam(defaultValue = "1") Long pageNum,
@@ -893,10 +1042,28 @@ String keyword, Integer userTpye, Integer status
 
 ## 新模块 eams-course 课程模块
 
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course`：课程服务的模块根目录；本节后面的启动类、实体、Mapper、Service、Controller 都在这个模块中。
+> - `/eams-parent/eams-modules/pom.xml`：父模块的 `<modules>` 中登记子模块 `eams-course`。
+
+
 ## pom文件配置 版本 依赖
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/pom.xml`：课程模块自己的 POM，包含本节的 `<description>`、父模块声明和依赖。
+> - `/eams-parent/eams-modules/pom.xml`：课程模块的直接父模块 POM，登记 `eams-course` 子模块。
+> - `/eams-parent/pom.xml`：整个项目的父工程 POM，统一管理版本、公共依赖和构建插件。
+
 <description>EAMS 课程服务</description> //服务简介
 
 ## 启动类
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/EamsCourseApplication.java`：课程服务启动类 `EamsCourseApplication`；入口为 `main(...)`，类上配置 `@SpringBootApplication` 和 `@MapperScan`。
+
 @SpringBootApplication(scanBasePackages = "com.eams")
 @MapperScan("com.eams.course.mapper")
 public class EamsCourseApplication {
@@ -908,6 +1075,11 @@ public class EamsCourseApplication {
 }
 
 ## yml文件配置
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/resources/application.yml`：课程服务配置文件；本节的 `server.port`、`spring.application`、`spring.cloud.nacos.discovery`、`spring.datasource`、`springdoc`、`knife4j` 都放在这里。
+
 # 课程服务端口
 server:
   port: 8085
@@ -942,6 +1114,11 @@ knife4j:
     language: zh_cn
 
 ## 实体类
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/entity/EduCourse.java`：课程实体 `EduCourse`，通过 `@TableName("edu_course")` 对应课程表；课程 ID、名称、简介、状态和时间字段在这个文件中。
+
 /**
  * 课程实体
  */
@@ -975,11 +1152,22 @@ public class EduCourse {
 tips：@Data 注解会自动生成 get 和 set 方法。注意属性名要跟数据库里的字段对的上，EduCourse类里的属性要参与数据库字段映射。courseName（实体类里） -> course_name（数据库里）。
 
 ## mapper数据库操作接口 （mybatis-plus提供）
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/mapper/EduCourseMapper.java`：课程数据库操作接口 `EduCourseMapper`，继承 `BaseMapper<EduCourse>`。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/EamsCourseApplication.java`：扫描这个 Mapper 包的位置：类上的 `@MapperScan("com.eams.course.mapper")`。
+
 public interface EduCourseMapper extends BaseMapper<EduCourse> {
 }
 tips：BaseMapper<EduCourse>是 MyBatis-Plus 提供的通用数据库操作接口，前面启动类的@MapperScan("com.eams.course.mapper")就是扫描的这里，把mapper接口注册进应用。
 
 ## servcie业务接口 （mybatis-plus提供）
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/service/EduCourseService.java`：课程业务接口 `EduCourseService`，继承 `IService<EduCourse>`；后续 `addCourse(...)`、`getCourseDetail(...)`、`pageQuery(...)` 也在此声明。
+
 /**
  * 课程业务接口
  */
@@ -988,6 +1176,13 @@ public interface EduCourseService extends IService<EduCourse> {
 tips：IService<EduCourse> 是 MyBatis-Plus 提供的通用业务接口，前面启动类的@ServiceScan("com.eams.course.service")就是扫描的这里，把service接口注册进应用。
 
 ## 实现类
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/service/impl/EduCourseServiceImpl.java`：课程业务实现 `EduCourseServiceImpl`，继承 `ServiceImpl<EduCourseMapper, EduCourse>` 并实现 `EduCourseService`；`@Service` 标在这个类上。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/mapper/EduCourseMapper.java`：`ServiceImpl` 泛型中使用的 Mapper 接口。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/entity/EduCourse.java`：`ServiceImpl` 泛型中使用的课程实体。
+
 /**
  * 课程业务实现
  */
@@ -1002,6 +1197,13 @@ public class EduCourseServiceImpl
 tips：ServiceImpl 是 MyBatis-Plus 写好的通用实现类，用户模块、课程模块都能用。它需要通过泛型知道你这个模块具体用哪些类型。这里EduCourse用的就是实体类。在java里叫引用类型。
 
 ## Controller
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/controller/CourseController.java`：课程接口类 `CourseController`；本节重点是构造方法注入和 `list()`，请求入口为 `GET /course/list`。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/service/EduCourseService.java`：注入的业务接口；`list()` 是从 `IService<EduCourse>` 继承的方法。
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/api/Result.java`：包装课程列表的统一返回对象，使用 `success(T data)`。
+
 /**
  * 课程接口
  */
@@ -1051,6 +1253,12 @@ eduCourseService.list();
 
 ------------------------------------
 ## 新增课程-接收新增数据的对象 DTO
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/dto/CourseAddDTO.java`：新增课程参数类 `CourseAddDTO`；课程名称、简介及 `@NotBlank`、`@Size` 校验规则写在这里。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/controller/CourseController.java`：接收这个 DTO 的位置是新增方法 `add(@Valid @RequestBody CourseAddDTO courseAddDTO)`。
+
 /**
  * 新增课程的请求参数
  */
@@ -1076,6 +1284,13 @@ EduCourse	表示数据库中的完整课程记录
 - @NotBlank：不能不传、不能是空字符串，也不能只有空格。
 
 ## 新增课程-接口、实现
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/service/EduCourseService.java`：本节第一个接口，声明 `Long addCourse(CourseAddDTO courseAddDTO)`。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/service/impl/EduCourseServiceImpl.java`：本节第二个类，`addCourse(...)` 中组装 `EduCourse`、设草稿状态、调用 `save(course)` 并返回 ID。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/entity/EduCourse.java`：方法中 `new EduCourse()` 创建的实体；ID、课程名称、简介和状态字段定义在这里。
+
 /**
  * 课程业务接口
  */
@@ -1121,6 +1336,13 @@ course.setCourseName("Java 基础入门");
 course.setStatus(0);
 
 ## 新增课程-Controller（把新增业务结成HTTP接口）
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/controller/CourseController.java`：类 `CourseController` 的 `add(...)` 方法；`@PostMapping` 结合类上的 `/course`，对应 `POST /course`。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/dto/CourseAddDTO.java`：`@RequestBody` 接收、`@Valid` 校验的请求参数类。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/service/impl/EduCourseServiceImpl.java`：Controller 交给 Service 执行的 `addCourse(...)` 业务实现。
+
    //新增课程
     @PostMapping
     public Result<Long> add(@Valid @RequestBody CourseAddDTO courseAddDTO){
@@ -1133,6 +1355,16 @@ course.setStatus(0);
 @Valid：检查 DTO 中的校验规则，例如课程名称不能为空。
 
 ## 新增课程整体流程
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/controller/CourseController.java`：流程入口：`add(...)` 接收 `POST /course` 并返回新增 ID。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/dto/CourseAddDTO.java`：参数转换与校验：课程名称、简介及校验注解。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/service/EduCourseService.java`：业务接口：声明 `addCourse(...)`。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/service/impl/EduCourseServiceImpl.java`：业务实现：`addCourse(...)` 组装实体并保存。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/entity/EduCourse.java`：被保存的实体：`EduCourse` 对应数据库表 `edu_course`。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/mapper/EduCourseMapper.java`：数据库操作：`save(...)` 经继承的 MyBatis-Plus 实现使用这个 Mapper 完成插入。
+
 前端发送请求：向 POST /course 提交课程名称、简介等 JSON 数据。
 Spring 转换并校验：通过 @RequestBody 转成 CourseAddDTO 对象，再通过 @Valid 检查名称是否为空、长度是否超限。
 Controller 调用业务方法：把 DTO 传给 eduCourseService.addCourse(courseAddDTO)。
@@ -1143,12 +1375,29 @@ Service 组装课程实体：创建 EduCourse 对象，填入名称、简介，�
 
 ---------------
 ## 课程详情查询（给一个课程 ID，返回这门课程的信息；查不到就提示“课程不存在”。）
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course`：这一组“接口 → 实现 → Controller”都属于课程服务模块；下面各小节分别标出具体文件。
+
 ## 课程详情查询-接口
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/service/EduCourseService.java`：在 `EduCourseService` 接口内声明 `EduCourse getCourseDetail(Long id)`。
+
     //根据id查询课程详情
     EduCourse getCourseDetail(Long id);
 
 
 ## 课程详情查询-实现
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/service/impl/EduCourseServiceImpl.java`：方法 `getCourseDetail(Long id)`：调用 `getById(id)`；不存在时抛出“课程不存在”。
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/exception/BizException.java`：查询失败时抛出的业务异常类型。
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/enums/ResultCode.java`：业务异常使用的 `NOT_FOUND` 响应码枚举。
+
     // 查询获取课程详情
     @Override
     public EduCourse getCourseDetail(Long id){
@@ -1163,6 +1412,11 @@ Service 组装课程实体：创建 EduCourse 对象，填入名称、简介，�
 
 
 ## 课程详情查询-Controller
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/controller/CourseController.java`：方法 `detail(@PathVariable("id") Long id)`；完整接口为 `GET /course/{id}`，内部调用 `eduCourseService.getCourseDetail(id)`。
+
     @GetMapping("/{id}")
     public Result<EduCourse> detail(@PathVariable("id") Long id){
         EduCourse course = eduCourseService.getCourseDetail(id);
@@ -1173,6 +1427,11 @@ tips：@PathVariable("id") Long id 是从 URL 中提取的课程 ID,所以注解
 
 ------------------
 ## 课程分页查询-DTO
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/dto/CourseQueryDTO.java`：课程分页请求参数 `CourseQueryDTO`；页码 `pageNum`、条数 `pageSize`、关键词 `keyword`、状态 `status` 和各字段校验规则都在这里。
+
 //课程分页查询参数
 @Data
 public class CourseQueryDTO {
@@ -1201,12 +1460,26 @@ tips：@NotNull、`@Min` 这些注解，是给下面的成员变量“贴规则�
 
 
 ## 课程分页查询-接口
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/service/EduCourseService.java`：在 `EduCourseService` 内声明 `PageResult<EduCourse> pageQuery(CourseQueryDTO courseQueryDTO)`。
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/api/PageResult.java`：接口返回的公共分页封装 `PageResult<T>`。
+
     //分页查询课程
     PageResult<EduCourse> pageQuery(CourseQueryDTO courseQueryDTO);
 
 
 
 ## 课程分页查询-实现
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/service/impl/EduCourseServiceImpl.java`：方法 `pageQuery(CourseQueryDTO queryDTO)`；分页对象、名称模糊查询、状态筛选、ID 倒序和 `this.page(...)` 都在此方法中。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/dto/CourseQueryDTO.java`：`queryDTO.getPageNum()`、`getPageSize()`、`getKeyword()`、`getStatus()` 的字段来源。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/entity/EduCourse.java`：`Page<EduCourse>` 和 `LambdaQueryWrapper<EduCourse>` 使用的课程实体，提供 ID、名称、状态等字段。
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/api/PageResult.java`：方法末尾 `PageResult.of(...)` 的定义，负责包装查询结果。
+
 // 分页查询课程
 @Override
 public PageResult<EduCourse> pageQuery(CourseQueryDTO queryDTO) {
@@ -1261,6 +1534,14 @@ EduCourse course;
 
 
 ## 课程分页查询-Mybatis-Plus配置
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/config/MybatisPlusConfig.java`：课程服务自己的分页插件配置类；当前项目中的 Bean 方法名为 `myBatisPlusInterceptor()`，在其中添加 `PaginationInnerInterceptor(DbType.MYSQL)`。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/EamsCourseApplication.java`：课程 Mapper 的扫描位置：启动类上的 `@MapperScan("com.eams.course.mapper")`。
+>
+> 这里定位的是 `eams-course` 模块的配置文件；用户模块还有一份位于 `eams-system` 中的同名配置类。
+
 /**
  * MyBatis-Plus 配置
  */
@@ -1287,6 +1568,14 @@ public class MybatisPlusConfig {
 
 
 ## 课程分页查询-Controller
+
+> **项目位置**
+>
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/controller/CourseController.java`：方法 `page(@Valid @ModelAttribute @ParameterObject CourseQueryDTO queryDTO)`；完整接口为 `GET /course/page`。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/dto/CourseQueryDTO.java`：URL 查询参数被绑定并校验的 DTO。
+> - `/eams-parent/eams-modules/eams-course/src/main/java/com/eams/course/service/EduCourseService.java`：Controller 调用的 `pageQuery(...)` 业务接口。
+> - `/eams-parent/eams-common/src/main/java/com/eams/common/api/Result.java`：最外层 `Result.success(pageResult)` 的响应封装定义。
+
 // 分页查询课程
 @GetMapping("/page")
 public Result<PageResult<EduCourse>> page(
@@ -1304,6 +1593,16 @@ public Result<PageResult<EduCourse>> page(
 @ParameterObject：让接口文档把 DTO 中的字段展开，方便在 Knife4j 中分别填写页码、关键词等参数。
 -------------------------------------------------------------------------------------------
 ## 前端
+
+> **项目位置**
+>
+> - `/eams-parent/eams-web`：前端工程根目录；本节安装依赖、启动开发服务器的命令都在这个目录中运行。
+> - `/eams-parent/eams-web/package.json`：模板名称、依赖列表及 `dev` 启动命令所在文件。
+> - `/eams-parent/eams-web/vite.config.ts`：前端 Vite 配置入口。
+> - `/eams-parent/eams-web/src/views/course/index.vue`：当前课程管理页面，包含课程列表、分页查询及新增入口。
+> - `/eams-parent/eams-web/src/service/api/course.ts`：课程接口请求：`fetchCourseList`、`fetchCoursePage`、`fetchCourseDetail`、`fetchAddCourse`。
+> - `/eams-parent/eams-web/src/service/api/user.ts`：用户接口请求，包括当前用户、用户分页和用户详情。
+
 - 模板 soybean
 https://github.com/soybeanjs/soybean-admin/releases/tag/v2.3.0
 终端下好前端工程需要的依赖 npx pnpm@12.10.1 install
